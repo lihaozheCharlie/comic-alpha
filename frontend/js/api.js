@@ -124,14 +124,15 @@ class ComicAPI {
     }
 
     /**
-     * Generate Xiaohongshu (Little Red Book) post content
+     * Generate social media post content (Xiaohongshu or Twitter)
      * @param {string} apiKey - OpenAI API key
      * @param {Array|Object} comicData - Comic pages data
      * @param {string} baseUrl - OpenAI API base URL
      * @param {string} model - Model name
-     * @returns {Promise<Object>} Generated Xiaohongshu content
+     * @param {string} platform - Platform type ('xiaohongshu' or 'twitter')
+     * @returns {Promise<Object>} Generated social media content
      */
-    static async generateXiaohongshuContent(apiKey, comicData, baseUrl, model) {
+    static async generateSocialMediaContent(apiKey, comicData, baseUrl, model, platform = 'xiaohongshu') {
         try {
             const response = await fetch(`${API_BASE_URL}/generate-xiaohongshu`, {
                 method: 'POST',
@@ -142,7 +143,8 @@ class ComicAPI {
                     api_key: apiKey,
                     comic_data: comicData,
                     base_url: baseUrl,
-                    model: model
+                    model: model,
+                    platform: platform
                 })
             });
 
@@ -154,9 +156,17 @@ class ComicAPI {
             const data = await response.json();
             return data;
         } catch (error) {
-            console.error('Xiaohongshu content generation failed:', error);
+            console.error('Social media content generation failed:', error);
             throw error;
         }
+    }
+
+    /**
+     * Generate Xiaohongshu (Little Red Book) post content
+     * @deprecated Use generateSocialMediaContent instead
+     */
+    static async generateXiaohongshuContent(apiKey, comicData, baseUrl, model) {
+        return this.generateSocialMediaContent(apiKey, comicData, baseUrl, model, 'xiaohongshu');
     }
 }
 

@@ -360,14 +360,15 @@ def proxy_image():
 @app.route('/api/generate-xiaohongshu', methods=['POST'])
 def generate_xiaohongshu_content():
     """
-    Generate Xiaohongshu (Little Red Book) post content
+    Generate social media post content (Xiaohongshu or Twitter)
     
     Expected JSON body:
     {
         "api_key": "your-openai-api-key",
         "comic_data": [...],  # array of comic pages
         "base_url": "https://api.openai.com/v1",  # optional
-        "model": "gpt-4o-mini"  # optional
+        "model": "gpt-4o-mini",  # optional
+        "platform": "xiaohongshu"  # or "twitter"
     }
     """
     try:
@@ -388,6 +389,7 @@ def generate_xiaohongshu_content():
         # Optional parameters
         base_url = data.get('base_url', 'https://api.openai.com/v1')
         model = data.get('model', 'gpt-4o-mini')
+        platform = data.get('platform', 'xiaohongshu')
         
         # Set OpenAI configuration
         openai.api_key = api_key
@@ -396,40 +398,68 @@ def generate_xiaohongshu_content():
         # Extract comic content summary
         comic_summary = _extract_comic_summary(comic_data)
         
-        # Generate Xiaohongshu content
-        system_prompt = """你是一个爆款小红书内容创作专家。请根据漫画内容创作一篇引爆流量的小红书帖子。
+        # Select prompts based on platform
+        if platform == 'twitter':
+            system_prompt = """You are a viral Twitter/X content creator. Create a CONCISE, punchy post.
 
-核心要求：
-1. 标题：15-25字，必须制造悬念、反转或强烈情绪冲击，善用emoji和符号
-   - 可用技巧：提问式、对比式、夸张式、共鸣式
-   - 例如："没想到...竟然..."、"震惊！原来..."、"太真实了！"
+⚠️ CRITICAL RULES:
+- DO NOT retell the comic story
+- DO NOT describe what happens in each panel
+- Extract the CORE EMOTION or RELATABLE MOMENT only
 
-2. 正文：200-500字，讲故事而非复述剧情
-   - 开头：用一句话抓住注意力（金句/疑问/共鸣点）
-   - 中间：提炼漫画的核心冲突、反转或情感高潮，用戏剧化的语言描述
-   - 结尾：引发思考或互动（提问/征集/共鸣）
-   - 多用短句、emoji、换行，营造节奏感
-   - 避免：流水账式复述、平铺直叙
+Format:
+1. Title (Main Tweet): 50-100 characters MAX
+   - One punchy hook that captures the vibe
+   - Examples: "me escaping responsibilities like 💨", "the duality of wanting peace but choosing chaos"
 
-3. 风格：年轻化、情绪化、有态度
-   - 可以夸张、可以吐槽、可以煽情
-   - 要有个人观点和情感表达
-   - 让读者产生"太懂我了"的感觉
+2. Content: 2-3 SHORT sentences (under 200 characters total)
+   - React to the comic's theme, don't summarize it
+   - Be relatable, funny, or thought-provoking
+   - Use 1-2 emojis max
 
-4. 标签：5-8个，混合热门话题和精准标签
+3. Tags: 3-4 hashtags only
 
-返回JSON格式：
+Return JSON:
 {
-  "title": "标题内容",
-  "content": "正文内容",
-  "tags": ["标签1", "标签2", ...]
+  "title": "short punchy hook",
+  "content": "brief reaction/commentary",
+  "tags": ["tag1", "tag2"]
 }"""
 
-        user_prompt = f"""请为以下漫画内容生成小红书帖子：
+            user_prompt = f"""Comic theme: {comic_summary}
 
-{comic_summary}
+Create a viral tweet that captures the FEELING, not the plot. Be concise!"""
 
-请生成吸引人的标题、正文和标签。"""
+        else:  # xiaohongshu (default)
+            system_prompt = """你是小红书爆款文案专家。创作简短有力的帖子。
+
+⚠️ 核心原则：
+- 绝对禁止：复述剧情、描述每一格内容
+- 必须做到：提炼情绪共鸣点，一句话戳中人心
+
+格式要求：
+1. 标题：10-18字
+   - 制造悬念或情绪冲击
+   - 例："成年人的崩溃就在一瞬间💔"、"这谁懂啊！！"
+
+2. 正文：80-150字（不超过150字！）
+   - 开头：1句情绪金句
+   - 中间：2-3句个人感悟/吐槽（不是剧情！）
+   - 结尾：1句引发互动
+   - 多用emoji和换行
+
+3. 标签：4-6个
+
+返回JSON：
+{
+  "title": "标题",
+  "content": "正文",
+  "tags": ["标签1", "标签2"]
+}"""
+
+            user_prompt = f"""漫画主题：{comic_summary}
+
+提炼情绪共鸣点，写出让人"太懂了！"的文案。简短有力！"""
 
         response = openai.ChatCompletion.create(
             model=model,
@@ -452,13 +482,14 @@ def generate_xiaohongshu_content():
             json_text = generated_text
         
         # Parse JSON
-        xiaohongshu_content = json.loads(json_text)
+        social_content = json.loads(json_text)
         
         return jsonify({
             "success": True,
-            "title": xiaohongshu_content.get("title", ""),
-            "content": xiaohongshu_content.get("content", ""),
-            "tags": xiaohongshu_content.get("tags", [])
+            "title": social_content.get("title", ""),
+            "content": social_content.get("content", ""),
+            "tags": social_content.get("tags", []),
+            "platform": platform
         })
         
     except json.JSONDecodeError as e:
@@ -468,32 +499,41 @@ def generate_xiaohongshu_content():
 
 
 def _extract_comic_summary(comic_data):
-    """Extract summary from comic data"""
-    summary_parts = []
+    """Extract a concise thematic summary from comic data (not verbose panel-by-panel)"""
+    titles = []
+    key_moments = []
     
-    if isinstance(comic_data, list):
-        for i, page in enumerate(comic_data, 1):
-            if 'title' in page:
-                summary_parts.append(f"第{i}页：{page['title']}")
-            
-            if 'rows' in page:
-                for row in page['rows']:
-                    if 'panels' in row:
-                        for panel in row['panels']:
-                            if 'text' in panel:
-                                summary_parts.append(f"  - {panel['text']}")
-    else:
-        if 'title' in comic_data:
-            summary_parts.append(f"标题：{comic_data['title']}")
+    pages = comic_data if isinstance(comic_data, list) else [comic_data]
+    
+    for page in pages:
+        # Collect page titles as they represent main themes
+        if 'title' in page:
+            titles.append(page['title'])
         
-        if 'rows' in comic_data:
-            for row in comic_data['rows']:
+        # Only extract first and last panel per page (beginning and climax)
+        if 'rows' in page:
+            all_panels = []
+            for row in page['rows']:
                 if 'panels' in row:
                     for panel in row['panels']:
-                        if 'text' in panel:
-                            summary_parts.append(f"  - {panel['text']}")
+                        if 'text' in panel and panel['text'].strip():
+                            all_panels.append(panel['text'].strip())
+            
+            # Get first panel (setup) and last panel (payoff) only
+            if all_panels:
+                key_moments.append(all_panels[0])
+                if len(all_panels) > 1:
+                    key_moments.append(all_panels[-1])
     
-    return "\n".join(summary_parts)
+    # Build concise summary
+    summary = ""
+    if titles:
+        summary += f"主题：{'→'.join(titles[:3])}\n"  # Max 3 titles
+    if key_moments:
+        # Limit to 4 key moments to avoid verbosity
+        summary += f"关键场景：{'；'.join(key_moments[:4])}"
+    
+    return summary if summary else "一个有趣的漫画故事"
 
 
 def _convert_page_to_prompt(page_data, comic_style: str = 'doraemon') -> str:

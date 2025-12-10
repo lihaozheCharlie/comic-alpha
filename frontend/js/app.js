@@ -7,12 +7,12 @@ class UIController {
         this.pageManager = new PageManager();
         this.renderer = new ComicRenderer('comic-page');
         this.isGenerating = false;
-        
+
         // Initialize i18n
         if (window.i18n) {
             window.i18n.init();
         }
-        
+
         this.initElements();
         this.initEventListeners();
         this.loadInitialConfig();
@@ -31,13 +31,13 @@ class UIController {
         this.comicStyleSelect = document.getElementById('comic-style');
         this.comicLanguageSelect = document.getElementById('comic-language');
         this.jsonInput = document.getElementById('json-input');
-        
+
         // Config elements
         this.baseUrlInput = document.getElementById('base-url');
         this.modelSelect = document.getElementById('model-select');
         this.customModelInput = document.getElementById('custom-model');
         this.configPanel = document.getElementById('config-panel');
-        
+
         // Button elements
         this.generateBtn = document.querySelector('button[onclick="generateWithAI()"]');
         this.renderBtn = document.querySelector('button[onclick="renderComic()"]');
@@ -45,14 +45,14 @@ class UIController {
         this.generateAllBtn = document.getElementById('generate-all-btn');
         this.prevBtn = document.getElementById('prev-btn');
         this.nextBtn = document.getElementById('next-btn');
-        
+
         // Status elements
         this.aiStatus = document.getElementById('ai-status');
         this.errorMsg = document.getElementById('error-msg');
         this.pageIndicator = document.getElementById('page-indicator');
         this.pageNav = document.getElementById('page-nav');
         this.actionButtons = document.getElementById('action-buttons');
-        
+
         // Hide download button initially
         if (this.downloadBtn) {
             this.downloadBtn.style.display = 'none';
@@ -67,7 +67,7 @@ class UIController {
         this.apiKeyInput.addEventListener('blur', () => {
             ConfigManager.saveApiKey(this.apiKeyInput.value);
         });
-        
+
         // Google API key auto-save
         this.googleApiKeyInput.addEventListener('blur', () => {
             ConfigManager.saveGoogleApiKey(this.googleApiKeyInput.value);
@@ -82,12 +82,12 @@ class UIController {
                 customInput.style.display = 'none';
             }
         });
-        
+
         // Listen for language change events
         window.addEventListener('languageChanged', (e) => {
             this.onLanguageChanged(e.detail.lang);
         });
-        
+
         // Add keyboard shortcut for Command+Enter (or Ctrl+Enter on Windows/Linux)
         this.promptInput.addEventListener('keydown', (e) => {
             if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
@@ -105,7 +105,7 @@ class UIController {
         if (languageSelect && window.i18n) {
             const currentLang = window.i18n.getLanguage();
             languageSelect.value = currentLang;
-            
+
             // Sync comic language with interface language on page load
             const comicLanguageSelect = document.getElementById('comic-language');
             if (comicLanguageSelect) {
@@ -113,7 +113,7 @@ class UIController {
             }
         }
     }
-    
+
     /**
      * Handle language change
      * @param {string} lang - New language code
@@ -134,32 +134,32 @@ class UIController {
         const config = ConfigManager.loadConfig();
         this.baseUrlInput.value = config.baseUrl;
         this.modelSelect.value = config.model;
-        
+
         if (config.customModel) {
             this.customModelInput.value = config.customModel;
         }
-        
+
         if (config.model === 'custom') {
             document.getElementById('custom-model-input').style.display = 'block';
         }
-        
+
         // Load saved API key
         const savedApiKey = ConfigManager.loadApiKey();
         if (savedApiKey) {
             this.apiKeyInput.value = savedApiKey;
         }
-        
+
         // Load saved Google API key
         const savedGoogleApiKey = ConfigManager.loadGoogleApiKey();
         if (savedGoogleApiKey) {
             this.googleApiKeyInput.value = savedGoogleApiKey;
         }
-        
+
         // Set up renderer onChange callback
         this.renderer.setOnChange((data) => {
             this.onComicDataChange(data);
         });
-        
+
         // Render initial comic
         this.renderComic();
     }
@@ -182,23 +182,23 @@ class UIController {
         const baseUrl = this.baseUrlInput.value.trim();
         const model = this.modelSelect.value;
         const customModel = this.customModelInput.value.trim();
-        
+
         if (!baseUrl) {
             alert(window.i18n.t('alertNoBaseUrl'));
             return;
         }
-        
+
         if (model === 'custom' && !customModel) {
             alert(window.i18n.t('alertNoCustomModel'));
             return;
         }
-        
+
         const config = {
             baseUrl: baseUrl,
             model: model,
             customModel: customModel
         };
-        
+
         if (ConfigManager.saveConfig(config)) {
             alert(window.i18n.t('alertConfigSaved'));
         } else {
@@ -211,36 +211,36 @@ class UIController {
      */
     async generateWithAI() {
         if (this.isGenerating) return;
-        
+
         const apiKey = this.apiKeyInput.value.trim();
         const prompt = this.promptInput.value.trim();
         const pageCount = parseInt(this.pageCountInput.value) || 3;
         const comicStyle = this.comicStyleSelect.value;
         const language = this.comicLanguageSelect.value;
-        
+
         // Validate inputs
         if (!apiKey) {
             alert(window.i18n.t('alertNoApiKey'));
             return;
         }
-        
+
         if (!prompt) {
             alert(window.i18n.t('alertNoPrompt'));
             return;
         }
-        
+
         const originalBtnContent = this.generateBtn.innerHTML;
 
         try {
             this.isGenerating = true;
             const config = ConfigManager.getCurrentConfig();
-            
+
             // Update UI with spinner
             this.generateBtn.disabled = true;
             this.generateBtn.classList.add('loading');
             this.generateBtn.innerHTML = '<span class="spinner" style="margin-right: 0;"></span>';
             // this.showStatus(window.i18n.t('statusGenerating', { model: config.model }), 'info');
-            
+
             // Call API
             const result = await ComicAPI.generateComic(
                 apiKey,
@@ -251,10 +251,10 @@ class UIController {
                 comicStyle,
                 language
             );
-            
+
             // Update page manager
             this.pageManager.setPages(result.pages);
-            
+
             // Show action buttons container
             if (this.actionButtons) {
                 this.actionButtons.style.display = 'flex';
@@ -264,7 +264,7 @@ class UIController {
             if (this.downloadBtn) {
                 this.downloadBtn.style.display = 'block';
             }
-            
+
             // Show navigation if multiple pages
             if (result.page_count > 1) {
                 this.pageNav.style.display = 'flex';
@@ -273,24 +273,24 @@ class UIController {
                 this.pageNav.style.display = 'none';
                 this.generateAllBtn.style.display = 'none';
             }
-            
+
             // Show Xiaohongshu button
             const xiaohongshuBtn = document.getElementById('xiaohongshu-btn');
             if (xiaohongshuBtn) {
                 xiaohongshuBtn.style.display = 'block';
             }
-            
+
             // Load first page
             this.loadCurrentPage();
-            
+
             // Show success
             this.showStatus(window.i18n.t('statusSuccess', { count: result.page_count }), 'success');
             setTimeout(() => this.hideStatus(), 3000);
-            
+
         } catch (error) {
             console.error('AI generation failed:', error);
             this.showStatus(window.i18n.t('statusError', { error: error.message }), 'error');
-            
+
             let errorMsg = window.i18n.t('errorGenerationFailed', { error: error.message });
             alert(errorMsg);
         } finally {
@@ -308,30 +308,30 @@ class UIController {
      */
     renderComic() {
         const input = this.jsonInput.value;
-        
+
         // Skip rendering if input is empty
         if (!input || input.trim() === '') {
             return;
         }
-        
+
         try {
             const data = JSON.parse(input);
             this.errorMsg.style.display = 'none';
-            
+
             if (this.renderer.render(data)) {
                 // Success - show comic page and hint
                 const comicPage = document.getElementById('comic-page');
                 const editHint = document.querySelector('.edit-hint');
                 const previewContainer = document.querySelector('.preview-container');
-                
+
                 if (comicPage) comicPage.style.display = 'flex';
                 if (editHint) editHint.style.display = 'block';
                 if (previewContainer) previewContainer.classList.add('has-content');
-                
+
                 // Show action buttons
                 if (this.actionButtons) this.actionButtons.style.display = 'flex';
                 if (this.downloadBtn) this.downloadBtn.style.display = 'block';
-                
+
                 // Check if we need to show Xiaohongshu button (if we have pages)
                 if (this.pageManager.getPageCount() > 0) {
                     const xiaohongshuBtn = document.getElementById('xiaohongshu-btn');
@@ -359,7 +359,7 @@ class UIController {
     onComicDataChange(data) {
         // Update JSON input (even though it's hidden)
         this.jsonInput.value = JSON.stringify(data, null, 2);
-        
+
         // Update page manager if we're in multi-page mode
         if (this.pageManager.getPageCount() > 0) {
             this.pageManager.updateCurrentPage(data);
@@ -372,19 +372,19 @@ class UIController {
     loadCurrentPage() {
         const pageData = this.pageManager.getCurrentPage();
         if (!pageData) return;
-        
+
         // Update JSON editor
         this.jsonInput.value = JSON.stringify(pageData, null, 2);
-        
+
         // Update page indicator
         const current = this.pageManager.getCurrentPageIndex() + 1;
         const total = this.pageManager.getPageCount();
         this.pageIndicator.innerText = ' (' + window.i18n.t('pageIndicator', { current, total }) + ')';
-        
+
         // Update button states
         this.prevBtn.disabled = !this.pageManager.hasPrevPage();
         this.nextBtn.disabled = !this.pageManager.hasNextPage();
-        
+
         // Render
         this.renderComic();
     }
@@ -413,14 +413,14 @@ class UIController {
     async downloadCurrentPage() {
         const btn = this.downloadBtn;
         const originalText = btn.innerText;
-        
+
         try {
             btn.disabled = true;
             btn.innerText = '生成中...';
-            
+
             const element = this.renderer.getContainer();
             const success = await ComicExporter.downloadPage(element);
-            
+
             if (!success) {
                 alert('图片生成失败，请重试');
             }
@@ -440,43 +440,43 @@ class UIController {
      */
     async generateFinalImage() {
         const pageData = this.pageManager.getCurrentPage();
-        
+
         if (!pageData) {
             alert(window.i18n.t('alertNoPageData'));
             return;
         }
-        
+
         // Check Google API key
         const googleApiKey = this.googleApiKeyInput.value.trim();
         if (!googleApiKey) {
             alert(window.i18n.t('alertNoGoogleApiKey') || 'Please configure Google API Key in settings');
             return;
         }
-        
+
         // Get the button element
         const generateImageBtn = document.querySelector('button[onclick="generateFinalImage()"]');
-        
+
         try {
             // Add loading state - only disable and add spinner, no text change
             if (generateImageBtn) {
                 generateImageBtn.disabled = true;
                 generateImageBtn.classList.add('loading');
             }
-            
+
             this.showStatus(window.i18n.t('statusPreparing'), 'info');
-            
+
             // Get current sketch as base64 (layout only, without text)
             const element = this.renderer.getContainer();
             const sketchBase64 = await ComicExporter.getBase64WithoutText(element);
-            
+
             // Get current comic style
             const comicStyle = this.comicStyleSelect.value;
-            
+
             this.showStatus(window.i18n.t('statusGeneratingImage'), 'info');
-            
+
             // Call API to generate image with sketch as reference
             const result = await ComicAPI.generateComicImage(pageData, googleApiKey, sketchBase64, null, comicStyle);
-            
+
             if (result.success && result.image_url) {
                 // Show the generated image
                 this.displayGeneratedImage(result.image_url);
@@ -485,11 +485,11 @@ class UIController {
             } else {
                 throw new Error('Image generation failed');
             }
-            
+
         } catch (error) {
             console.error('Image generation failed:', error);
             this.showStatus(window.i18n.t('statusError', { error: error.message }), 'error');
-            
+
             let errorMsg = window.i18n.t('errorImageFailed', { error: error.message });
             alert(errorMsg);
         } finally {
@@ -507,51 +507,51 @@ class UIController {
      */
     async generateAllPagesImages() {
         const totalPages = this.pageManager.getPageCount();
-        
+
         if (totalPages === 0) {
             alert(window.i18n.t('alertNoPages'));
             return;
         }
-        
+
         // Check Google API key
         const googleApiKey = this.googleApiKeyInput.value.trim();
         if (!googleApiKey) {
             alert(window.i18n.t('alertNoGoogleApiKey') || 'Please configure Google API Key in settings');
             return;
         }
-        
+
         // Confirm with user
         if (!confirm(window.i18n.t('alertGenerateAll', { total: totalPages }))) {
             return;
         }
-        
+
         const generatedImages = []; // Store generated image URLs
         const comicStyle = this.comicStyleSelect.value;
         const originalPageIndex = this.pageManager.getCurrentPageIndex();
-        
+
         try {
             // Disable buttons during generation - only disable and add spinner, no text change
             this.generateAllBtn.disabled = true;
             this.generateAllBtn.classList.add('loading');
-            
+
             for (let i = 0; i < totalPages; i++) {
                 // Update status with spinner
                 this.showStatus(window.i18n.t('statusGeneratingPage', { current: i + 1, total: totalPages }), 'info');
-                
+
                 // Navigate to the page
                 this.pageManager.setCurrentPageIndex(i);
                 this.loadCurrentPage();
-                
+
                 // Wait for rendering
                 await this._delay(300);
-                
+
                 // Get current page data
                 const pageData = this.pageManager.getCurrentPage();
-                
+
                 // Get current sketch as base64 (layout only)
                 const element = this.renderer.getContainer();
                 const sketchBase64 = await ComicExporter.getBase64WithoutText(element);
-                
+
                 // Prepare reference images (use previous 2-3 generated pages)
                 let previousPages = null;
                 if (generatedImages.length > 0) {
@@ -559,17 +559,17 @@ class UIController {
                     const refCount = Math.min(2, generatedImages.length);
                     previousPages = generatedImages.slice(-refCount);
                 }
-                
+
                 // Generate image with sketch and previous pages as reference
                 // Pass sketch as reference_img and previous pages as extra_body
                 const result = await ComicAPI.generateComicImage(
                     pageData,
                     googleApiKey,
-                    sketchBase64, 
+                    sketchBase64,
                     previousPages,  // Pass previous pages as extra_body parameter
                     comicStyle
                 );
-                
+
                 if (result.success && result.image_url) {
                     generatedImages.push({
                         pageIndex: i,
@@ -579,27 +579,27 @@ class UIController {
                 } else {
                     throw new Error(`第 ${i + 1} 页生成失败`);
                 }
-                
+
                 // Small delay between generations
                 await this._delay(500);
             }
-            
+
             // Restore original page
             this.pageManager.setCurrentPageIndex(originalPageIndex);
             this.loadCurrentPage();
-            
+
             // Show success and display all generated images
             this.showStatus(window.i18n.t('statusAllSuccess', { total: totalPages }), 'success');
             this.displayAllGeneratedImages(generatedImages);
-            
+
         } catch (error) {
             console.error('Batch generation failed:', error);
             this.showStatus(window.i18n.t('statusError', { error: error.message }), 'error');
-            
+
             // Restore original page
             this.pageManager.setCurrentPageIndex(originalPageIndex);
             this.loadCurrentPage();
-            
+
             // If some images were generated, still show them
             if (generatedImages.length > 0) {
                 alert(window.i18n.t('alertBatchError', { success: generatedImages.length, total: totalPages, error: error.message }));
@@ -620,7 +620,7 @@ class UIController {
      */
     displayAllGeneratedImages(images) {
         if (!images || images.length === 0) return;
-        
+
         // Create modal overlay
         const modal = document.createElement('div');
         modal.style.cssText = `
@@ -636,7 +636,7 @@ class UIController {
             overflow-y: auto;
             padding: 20px;
         `;
-        
+
         // Create header
         const header = document.createElement('div');
         header.style.cssText = `
@@ -647,7 +647,7 @@ class UIController {
             margin-bottom: 20px;
         `;
         header.innerText = window.i18n.t('modalGeneratedTitle', { count: images.length });
-        
+
         // Create gallery container
         const gallery = document.createElement('div');
         gallery.style.cssText = `
@@ -658,7 +658,7 @@ class UIController {
             margin: 0 auto;
             width: 100%;
         `;
-        
+
         // Add each image
         images.forEach((img, index) => {
             const card = document.createElement('div');
@@ -668,7 +668,7 @@ class UIController {
                 padding: 15px;
                 box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
             `;
-            
+
             const title = document.createElement('div');
             title.style.cssText = `
                 font-weight: bold;
@@ -676,7 +676,7 @@ class UIController {
                 font-size: 16px;
             `;
             title.innerText = img.pageTitle;
-            
+
             const image = document.createElement('img');
             image.src = img.imageUrl;
             image.style.cssText = `
@@ -686,7 +686,7 @@ class UIController {
                 border-radius: 4px;
                 margin-bottom: 10px;
             `;
-            
+
             const downloadBtn = document.createElement('button');
             downloadBtn.innerText = window.i18n.t('btnDownloadThis');
             downloadBtn.style.cssText = `
@@ -702,13 +702,13 @@ class UIController {
             downloadBtn.onclick = () => {
                 this.downloadImageFromUrl(img.imageUrl);
             };
-            
+
             card.appendChild(title);
             card.appendChild(image);
             card.appendChild(downloadBtn);
             gallery.appendChild(card);
         });
-        
+
         // Create action buttons
         const actions = document.createElement('div');
         actions.style.cssText = `
@@ -720,7 +720,7 @@ class UIController {
             margin-left: auto;
             margin-right: auto;
         `;
-        
+
         const downloadAllBtn = document.createElement('button');
         downloadAllBtn.innerText = window.i18n.t('btnDownloadAll');
         downloadAllBtn.style.cssText = `
@@ -744,7 +744,7 @@ class UIController {
             downloadAllBtn.disabled = false;
             downloadAllBtn.innerText = window.i18n.t('btnDownloadAll');
         };
-        
+
         const closeBtn = document.createElement('button');
         closeBtn.innerText = window.i18n.t('btnClose');
         closeBtn.style.cssText = `
@@ -761,15 +761,15 @@ class UIController {
         closeBtn.onclick = () => {
             document.body.removeChild(modal);
         };
-        
+
         actions.appendChild(downloadAllBtn);
         actions.appendChild(closeBtn);
-        
+
         // Assemble modal
         modal.appendChild(header);
         modal.appendChild(gallery);
         modal.appendChild(actions);
-        
+
         // Add to page
         document.body.appendChild(modal);
     }
@@ -803,7 +803,7 @@ class UIController {
             z-index: 10000;
             cursor: pointer;
         `;
-        
+
         // Create image container
         const imgContainer = document.createElement('div');
         imgContainer.style.cssText = `
@@ -814,7 +814,7 @@ class UIController {
             border-radius: 8px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
         `;
-        
+
         // Create image
         const img = document.createElement('img');
         img.src = imageUrl;
@@ -823,7 +823,7 @@ class UIController {
             max-height: 80vh;
             display: block;
         `;
-        
+
         // Create download button
         const downloadBtn = document.createElement('button');
         downloadBtn.innerText = window.i18n.t('btnDownloadImage');
@@ -842,7 +842,7 @@ class UIController {
             e.stopPropagation();
             this.downloadImageFromUrl(imageUrl);
         };
-        
+
         // Create close button
         const closeBtn = document.createElement('button');
         closeBtn.innerText = window.i18n.t('btnClose');
@@ -861,23 +861,23 @@ class UIController {
             e.stopPropagation();
             document.body.removeChild(modal);
         };
-        
+
         // Assemble modal
         imgContainer.appendChild(img);
         imgContainer.appendChild(downloadBtn);
         imgContainer.appendChild(closeBtn);
         modal.appendChild(imgContainer);
-        
+
         // Close on background click
         modal.onclick = () => {
             document.body.removeChild(modal);
         };
-        
+
         // Prevent closing when clicking on image container
         imgContainer.onclick = (e) => {
             e.stopPropagation();
         };
-        
+
         // Add to page
         document.body.appendChild(modal);
     }
@@ -893,7 +893,7 @@ class UIController {
                 if (response.ok) {
                     const blob = await response.blob();
                     const blobUrl = window.URL.createObjectURL(blob);
-                    
+
                     const a = document.createElement('a');
                     a.href = blobUrl;
                     a.download = `comic-final-${Date.now()}.png`;
@@ -906,11 +906,11 @@ class UIController {
             } catch (directError) {
                 console.warn('Direct download failed:', directError);
             }
-            
+
             // Last resort: open in new tab (user can right-click save)
             window.open(imageUrl, '_blank');
             alert(window.i18n.t('alertDownloadAlt'));
-            
+
         } catch (error) {
             console.error('Download failed:', error);
             alert(window.i18n.t('alertDownloadFailed'));
@@ -925,7 +925,7 @@ class UIController {
     showStatus(message, type = 'info') {
         this.aiStatus.style.display = 'block';
         this.aiStatus.innerText = message;
-        
+
         switch (type) {
             case 'success':
                 this.aiStatus.style.color = '#28a745';
@@ -946,54 +946,59 @@ class UIController {
     }
 
     /**
-     * Generate Xiaohongshu post content
+     * Generate social media post content (Xiaohongshu for Chinese, Twitter for English)
      */
     async generateXiaohongshuContent() {
         const apiKey = this.apiKeyInput.value.trim();
-        
+
         if (!apiKey) {
             alert(window.i18n.t('alertNoApiKey'));
             return;
         }
-        
+
         const comicData = this.pageManager.getAllPages();
-        
+
         if (!comicData || comicData.length === 0) {
             alert(window.i18n.t('alertNoComicData'));
             return;
         }
-        
+
+        // Determine platform based on UI language
+        const currentLang = window.i18n ? window.i18n.getLanguage() : 'en';
+        const platform = currentLang === 'zh' ? 'xiaohongshu' : 'twitter';
+
         // Get the button element
         const xiaohongshuBtn = document.getElementById('xiaohongshu-btn');
-        
+
         try {
             // Add loading state - only disable and add spinner, no text change
             if (xiaohongshuBtn) {
                 xiaohongshuBtn.disabled = true;
                 xiaohongshuBtn.classList.add('loading');
             }
-            
-            this.showStatus(window.i18n.t('statusXiaohongshu'), 'info');
-            
+
+            this.showStatus(window.i18n.t('statusSocialMedia'), 'info');
+
             const config = ConfigManager.getCurrentConfig();
-            
-            const result = await ComicAPI.generateXiaohongshuContent(
+
+            const result = await ComicAPI.generateSocialMediaContent(
                 apiKey,
                 comicData,
                 config.baseUrl,
-                config.model
+                config.model,
+                platform
             );
-            
+
             if (result.success) {
-                this.displayXiaohongshuContent(result.title, result.content, result.tags);
-                this.showStatus(window.i18n.t('statusXiaohongshuSuccess'), 'success');
+                this.displaySocialMediaContent(result.title, result.content, result.tags, platform);
+                this.showStatus(window.i18n.t('statusSocialMediaSuccess'), 'success');
                 setTimeout(() => this.hideStatus(), 3000);
             } else {
                 throw new Error('Content generation failed');
             }
-            
+
         } catch (error) {
-            console.error('Xiaohongshu content generation failed:', error);
+            console.error('Social media content generation failed:', error);
             this.showStatus(window.i18n.t('statusError', { error: error.message }), 'error');
             alert(window.i18n.t('statusError', { error: error.message }));
         } finally {
@@ -1006,12 +1011,13 @@ class UIController {
     }
 
     /**
-     * Display Xiaohongshu content in a modal
+     * Display social media content in a modal
      * @param {string} title - Post title
      * @param {string} content - Post content
      * @param {Array} tags - Post tags
+     * @param {string} platform - Platform type ('xiaohongshu' or 'twitter')
      */
-    displayXiaohongshuContent(title, content, tags) {
+    displaySocialMediaContent(title, content, tags, platform = 'xiaohongshu') {
         // Create modal overlay
         const modal = document.createElement('div');
         modal.style.cssText = `
@@ -1027,7 +1033,7 @@ class UIController {
             z-index: 10000;
             padding: 20px;
         `;
-        
+
         // Create content container
         const container = document.createElement('div');
         container.style.cssText = `
@@ -1040,8 +1046,8 @@ class UIController {
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
             overflow-y: auto;
         `;
-        
-        // Create header
+
+        // Create header with platform-specific title
         const header = document.createElement('div');
         header.style.cssText = `
             font-size: 24px;
@@ -1050,14 +1056,15 @@ class UIController {
             color: #1d1d1f;
             text-align: center;
         `;
-        header.innerText = window.i18n.t('modalXiaohongshuTitle');
-        
+        const modalTitleKey = platform === 'twitter' ? 'modalTwitterTitle' : 'modalXiaohongshuTitle';
+        header.innerText = window.i18n.t(modalTitleKey);
+
         // Create title section
         const titleSection = document.createElement('div');
         titleSection.style.cssText = `
             margin-bottom: 20px;
         `;
-        
+
         const titleLabel = document.createElement('div');
         titleLabel.style.cssText = `
             font-weight: 600;
@@ -1066,7 +1073,7 @@ class UIController {
             font-size: 14px;
         `;
         titleLabel.innerText = window.i18n.t('modalTitleLabel');
-        
+
         const titleText = document.createElement('div');
         titleText.style.cssText = `
             padding: 12px;
@@ -1078,16 +1085,16 @@ class UIController {
             line-height: 1.5;
         `;
         titleText.innerText = title;
-        
+
         titleSection.appendChild(titleLabel);
         titleSection.appendChild(titleText);
-        
+
         // Create content section
         const contentSection = document.createElement('div');
         contentSection.style.cssText = `
             margin-bottom: 20px;
         `;
-        
+
         const contentLabel = document.createElement('div');
         contentLabel.style.cssText = `
             font-weight: 600;
@@ -1096,7 +1103,7 @@ class UIController {
             font-size: 14px;
         `;
         contentLabel.innerText = window.i18n.t('modalContentLabel');
-        
+
         const contentText = document.createElement('div');
         contentText.style.cssText = `
             padding: 12px;
@@ -1108,16 +1115,16 @@ class UIController {
             white-space: pre-wrap;
         `;
         contentText.innerText = content;
-        
+
         contentSection.appendChild(contentLabel);
         contentSection.appendChild(contentText);
-        
+
         // Create tags section
         const tagsSection = document.createElement('div');
         tagsSection.style.cssText = `
             margin-bottom: 20px;
         `;
-        
+
         const tagsLabel = document.createElement('div');
         tagsLabel.style.cssText = `
             font-weight: 600;
@@ -1126,14 +1133,14 @@ class UIController {
             font-size: 14px;
         `;
         tagsLabel.innerText = window.i18n.t('modalTagsLabel');
-        
+
         const tagsContainer = document.createElement('div');
         tagsContainer.style.cssText = `
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
         `;
-        
+
         tags.forEach(tag => {
             const tagElement = document.createElement('span');
             tagElement.style.cssText = `
@@ -1146,10 +1153,10 @@ class UIController {
             tagElement.innerText = '#' + tag;
             tagsContainer.appendChild(tagElement);
         });
-        
+
         tagsSection.appendChild(tagsLabel);
         tagsSection.appendChild(tagsContainer);
-        
+
         // Create action buttons
         const actions = document.createElement('div');
         actions.style.cssText = `
@@ -1157,7 +1164,7 @@ class UIController {
             gap: 10px;
             margin-top: 20px;
         `;
-        
+
         const copyBtn = document.createElement('button');
         copyBtn.innerText = window.i18n.t('btnCopyAll');
         copyBtn.style.cssText = `
@@ -1182,7 +1189,7 @@ class UIController {
                 alert(window.i18n.t('alertCopyFailed'));
             });
         };
-        
+
         const closeBtn = document.createElement('button');
         closeBtn.innerText = window.i18n.t('btnClose');
         closeBtn.style.cssText = `
@@ -1199,10 +1206,10 @@ class UIController {
         closeBtn.onclick = () => {
             document.body.removeChild(modal);
         };
-        
+
         actions.appendChild(copyBtn);
         actions.appendChild(closeBtn);
-        
+
         // Assemble modal
         container.appendChild(header);
         container.appendChild(titleSection);
@@ -1210,14 +1217,14 @@ class UIController {
         container.appendChild(tagsSection);
         container.appendChild(actions);
         modal.appendChild(container);
-        
+
         // Close on background click
         modal.onclick = (e) => {
             if (e.target === modal) {
                 document.body.removeChild(modal);
             }
         };
-        
+
         // Add to page
         document.body.appendChild(modal);
     }
@@ -1279,7 +1286,7 @@ function changeLanguage(lang) {
     if (window.i18n) {
         window.i18n.setLanguage(lang);
     }
-    
+
     // Sync comic language with interface language
     const comicLanguageSelect = document.getElementById('comic-language');
     if (comicLanguageSelect) {

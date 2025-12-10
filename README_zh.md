@@ -5,9 +5,11 @@
 
 [English](./README.md) | [简体中文](./README_zh.md)
 
-> 源于开源，回馈开源。
-
-一个基于 AI 的漫画分镜脚本生成工具，支持多页漫画生成和图片导出。
+<div align="center">
+  <img src="./assets/banner.jpeg" alt="logo" width="200" height="auto" />
+  <h1>Comic Panel Generator</h1>
+  <p>一个基于 AI 的漫画分镜脚本生成工具，支持多页漫画生成和图片导出</p>
+</div>
 
 ## 📸 截图与示例
 

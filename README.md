@@ -5,9 +5,11 @@
 
 [English](./README.md) | [简体中文](./README_zh.md)
 
-> Originated from Open Source, give back to Open Source.
-
-An AI-based comic panel script generation tool that supports multi-page comic generation and image export.
+<div align="center">
+  <img src="./assets/banner.jpeg" alt="logo" width="200" height="auto" />
+  <h1>Comic Panel Generator</h1>
+  <p>An AI-based comic panel script generation tool that supports multi-page comic generation and image export</p>
+</div>
 
 ## 📸 Screenshots & Examples
 
