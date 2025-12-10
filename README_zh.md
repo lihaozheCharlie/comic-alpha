@@ -1,4 +1,4 @@
-# 漫画分镜生成器
+# 🎨 漫画分镜生成器
 
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -9,10 +9,68 @@
 
 一个基于 AI 的漫画分镜脚本生成工具，支持多页漫画生成和图片导出。
 
+## 📸 截图与示例
+
+### 界面演示
+
+<table>
+<tr>
+<td width="50%">
+
+**中文界面**
+
+![中文界面](./assets/demos/screenshot_cn.png)
+
+</td>
+<td width="50%">
+
+**英文界面**
+
+![英文界面](./assets/demos/screenshot_en.png)
+
+</td>
+</tr>
+<tr>
+<td colspan="2">
+
+**配置面板**
+
+![配置面板](./assets/demos/config-panel.png)
+
+</td>
+</tr>
+</table>
+
+### 生成的漫画示例
+
+<table>
+<tr>
+<td width="50%">
+
+**中文漫画示例**
+
+![哆啦A梦漫画](./assets/examples/doraemon-sample-comic_cn.png)
+
+</td>
+<td width="50%">
+
+**英文漫画示例**
+
+![美式漫画](./assets/examples/american-comic-sample.png)
+
+</td>
+</tr>
+</table>
+
+> 💡 **查看更多示例和演示请访问 [assets 文件夹](./assets/README.md)**
+
 ## 项目架构
 
 ```
 comic_alpha/
+├── assets/                     # 演示截图和示例漫画
+│   ├── demos/                 # UI 截图和演示
+│   └── examples/              # 生成的漫画示例
 ├── backend/                    # 后端服务
 │   ├── app.py                 # Flask 应用主文件
 │   └── requirements.txt       # Python 依赖

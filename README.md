@@ -9,10 +9,68 @@
 
 An AI-based comic panel script generation tool that supports multi-page comic generation and image export.
 
+## 📸 Screenshots & Examples
+
+### Interface Demos
+
+<table>
+<tr>
+<td width="50%">
+
+**Chinese Interface**
+
+![Chinese Interface](./assets/demos/screenshot_cn.png)
+
+</td>
+<td width="50%">
+
+**English Interface**
+
+![English Interface](./assets/demos/screenshot_en.png)
+
+</td>
+</tr>
+<tr>
+<td colspan="2">
+
+**Configuration Panel**
+
+![Config Panel](./assets/demos/config-panel.png)
+
+</td>
+</tr>
+</table>
+
+### Generated Comic Examples
+
+<table>
+<tr>
+<td width="50%">
+
+**Chinese Comic Example**
+
+![Doraemon Comic CN](./assets/examples/doraemon-sample-comic_cn.png)
+
+</td>
+<td width="50%">
+
+**English Comic Example**
+
+![American Comic EN](./assets/examples/american-comic-sample.png)
+
+</td>
+</tr>
+</table>
+
+> 💡 **See more examples and demos in the [assets folder](./assets/README.md)**
+
 ## Project Structure
 
 ```
 comic_alpha/
+├── assets/                     # Demo screenshots and example comics
+│   ├── demos/                 # UI screenshots and demos
+│   └── examples/              # Generated comic examples
 ├── backend/                    # Backend service
 │   ├── app.py                 # Flask application main file
 │   └── requirements.txt       # Python dependencies
