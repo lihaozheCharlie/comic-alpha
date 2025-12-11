@@ -441,11 +441,11 @@ Create a viral tweet that captures the FEELING and makes people say "this is so 
 - 加入你的态度和观点
 
 格式要求：
-1. 标题：12-22字
+1. 标题：12-20字
    - 制造悬念或情绪冲击
    - 例："成年人的崩溃就在一瞬间💔"、"看完这个漫画我沉默了..."
 
-2. 正文：150-280字
+2. 正文：100-150字
    - 开头：1-2句情绪金句/共鸣点
    - 中间：3-4句个人感悟、吐槽或延伸思考
    - 可以联系生活经历、社会现象
@@ -453,7 +453,7 @@ Create a viral tweet that captures the FEELING and makes people say "this is so 
    - 多用emoji、短句、换行营造节奏感
    - 语气要有态度：可以感慨、吐槽、煽情
 
-3. 标签：5-7个，混合热门+精准
+3. 标签：10个，混合热门+精准
 
 返回JSON：
 {
@@ -547,44 +547,36 @@ def _extract_comic_summary(comic_data):
 
 def _convert_page_to_prompt(page_data, comic_style: str = 'doraemon') -> str:
     """Convert page data to image generation prompt"""
-    # Define style descriptions for image generation
-    style_descriptions = {
-        "doraemon": "哆啦A梦漫画",
-        "american": "美式漫画风格",
-        "watercolor": "水彩风格",
-        "disney": "迪士尼动画风格",
-        "ghibli": "宫崎骏/吉卜力工作室风格",
-        "pixar": "皮克斯动画风格",
-        "shonen": "日本少年漫画风格"
-    }
 
-    style_desc = style_descriptions.get(comic_style, style_descriptions['doraemon'])
-    
-    prompt_parts = []
-    
-    # Add style instruction at the beginning
-    prompt_parts.append(f"用{style_desc}的风格，将参考图中每一个格子中的剧情转换为对应的漫画内容。\n要求：- 不要保留太多的文字内容，以漫画的形式表现出来。\n- 每个格子中的内容应该尽可能地简洁，不要过于复杂。\n- 保持角色和场景的一致性。\n- 保持漫画的布局和比例。")
-    
-    # Add title if exists
-    if 'title' in page_data:
-        prompt_parts.append(f"Comic page titled '{page_data['title']}'")
-    
-    # Add panel descriptions
+    panels = []
     if 'rows' in page_data:
-        prompt_parts.append("The comic page contains the following panels:")
         for i, row in enumerate(page_data['rows'], 1):
             if 'panels' in row:
                 for j, panel in enumerate(row['panels'], 1):
                     if 'text' in panel:
-                        prompt_parts.append(f"Panel {i}-{j}: {panel['text']}")
+                        panels.append(f"Panel {i}-{j}: {panel['text']}")
+
+    prompt_template = """Using the style of {comic_style}, convert the storyline in each panel of the reference image into corresponding comic content.
+
+# Requirements:
+- The content of each panel should avoid being overly complex.
+- Maintain consistency in characters and scenes.
+- Preserve the layout and proportions of the comic.
+- The comic title should use a {comic_style} font.
+- The image should be colorful and vibrant.
+- Do not show panel index in the content.
+
+# Content:
+
+## Title
+{title}
+
+## Panels
+{panels}
+"""
     
-    prompt_parts.append("Please generate a comic page image based on the above description.")
-    prompt_parts.append("The image should be colorful and vibrant.")
-    prompt_parts.append(f"The comic title should use a {style_desc} font.")
-    
-    # Create final prompt
-    final_prompt = "\n".join(prompt_parts)
-    
+    final_prompt = prompt_template.format(comic_style=comic_style, title=page_data['title'], panels="\n".join(panels))
+    print(final_prompt)
     return final_prompt
 
 
