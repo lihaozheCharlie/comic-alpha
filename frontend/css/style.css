@@ -1080,65 +1080,18 @@ label {
 }
 
 /* ========================================
-   Render Current Page Button (Bottom Prompt Area)
+   Secondary Action Buttons (Bottom Prompt Area)
+   Unified style for Render Page & Generate All
    ======================================== */
-.prompt-wrapper .render-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 16px !important;
-    background: linear-gradient(135deg, #34c759, #30b350) !important;
-    color: white !important;
-    border: none !important;
-    border-radius: 20px !important;
-    font-size: 13px !important;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
-    white-space: nowrap;
-    margin: 4px;
-    box-shadow: 0 2px 8px rgba(52, 199, 89, 0.3);
-}
-
-.prompt-wrapper .render-btn:hover:not(:disabled) {
-    background: linear-gradient(135deg, #30b350, #2aa148) !important;
-    box-shadow: 0 4px 12px rgba(52, 199, 89, 0.4);
-    transform: scale(1.02);
-}
-
-.prompt-wrapper .render-btn:active:not(:disabled) {
-    transform: scale(0.98);
-}
-
-.prompt-wrapper .render-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-.prompt-wrapper .render-btn.loading {
-    pointer-events: none;
-    opacity: 0.7;
-}
-
-.prompt-wrapper .render-btn.loading svg {
-    animation: spin 0.8s linear infinite;
-}
-
-.prompt-wrapper .render-btn svg {
-    flex-shrink: 0;
-}
-
-/* ========================================
-   Generate All Button (Bottom Prompt Area)
-   ======================================== */
+.prompt-wrapper .render-btn,
 .prompt-wrapper .generate-all-btn {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 8px 16px !important;
-    background: linear-gradient(135deg, #5856d6, #4745b8) !important;
-    color: white !important;
-    border: none !important;
+    padding: 8px 14px !important;
+    background: transparent !important;
+    color: var(--text-secondary) !important;
+    border: 1px solid var(--border-color) !important;
     border-radius: 20px !important;
     font-size: 13px !important;
     font-weight: 500;
@@ -1146,35 +1099,43 @@ label {
     transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
     white-space: nowrap;
     margin: 4px;
-    box-shadow: 0 2px 8px rgba(88, 86, 214, 0.3);
+    box-shadow: none;
 }
 
+.prompt-wrapper .render-btn:hover:not(:disabled),
 .prompt-wrapper .generate-all-btn:hover:not(:disabled) {
-    background: linear-gradient(135deg, #4745b8, #3634a3) !important;
-    box-shadow: 0 4px 12px rgba(88, 86, 214, 0.4);
-    transform: scale(1.02);
+    background: var(--ai-section-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: #007aff !important;
+    transform: none;
 }
 
+.prompt-wrapper .render-btn:active:not(:disabled),
 .prompt-wrapper .generate-all-btn:active:not(:disabled) {
     transform: scale(0.98);
 }
 
+.prompt-wrapper .render-btn:disabled,
 .prompt-wrapper .generate-all-btn:disabled {
-    opacity: 0.6;
+    opacity: 0.5;
     cursor: not-allowed;
 }
 
+.prompt-wrapper .render-btn.loading,
 .prompt-wrapper .generate-all-btn.loading {
     pointer-events: none;
     opacity: 0.7;
 }
 
+.prompt-wrapper .render-btn.loading svg,
 .prompt-wrapper .generate-all-btn.loading svg {
     animation: spin 0.8s linear infinite;
 }
 
+.prompt-wrapper .render-btn svg,
 .prompt-wrapper .generate-all-btn svg {
     flex-shrink: 0;
+    color: currentColor;
 }
 
 /* Loading Spinner */
