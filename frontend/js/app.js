@@ -7,6 +7,7 @@ class UIController {
         this.pageManager = new PageManager();
         this.renderer = new ComicRenderer('comic-page');
         this.isGenerating = false;
+        this.generatedPagesImages = {}; // Store generated images by page index for reference
 
         // Initialize i18n
         if (window.i18n) {
@@ -474,10 +475,33 @@ class UIController {
 
             this.showStatus(window.i18n.t('statusGeneratingImage'), 'info');
 
+            // Get previously generated pages for current page index as reference
+            const currentPageIndex = this.pageManager.getCurrentPageIndex();
+            let previousPages = null;
+            if (currentPageIndex > 0 && Object.keys(this.generatedPagesImages).length > 0) {
+                // Get generated images from previous pages (up to 2)
+                const prevImages = [];
+                for (let i = currentPageIndex - 1; i >= 0 && prevImages.length < 2; i--) {
+                    if (this.generatedPagesImages[i]) {
+                        prevImages.unshift(this.generatedPagesImages[i]);
+                    }
+                }
+                if (prevImages.length > 0) {
+                    previousPages = prevImages;
+                }
+            }
+
             // Call API to generate image with sketch as reference
-            const result = await ComicAPI.generateComicImage(pageData, googleApiKey, sketchBase64, null, comicStyle);
+            const result = await ComicAPI.generateComicImage(pageData, googleApiKey, sketchBase64, previousPages, comicStyle);
 
             if (result.success && result.image_url) {
+                // Store the generated image for this page
+                this.generatedPagesImages[currentPageIndex] = {
+                    pageIndex: currentPageIndex,
+                    imageUrl: result.image_url,
+                    pageTitle: pageData.title || `Page ${currentPageIndex + 1}`
+                };
+
                 // Show the generated image
                 this.displayGeneratedImage(result.image_url);
                 this.showStatus(window.i18n.t('statusImageSuccess'), 'success');
@@ -525,7 +549,8 @@ class UIController {
             return;
         }
 
-        const generatedImages = []; // Store generated image URLs
+        // Clear and reset generated images storage for batch generation
+        this.generatedPagesImages = {};
         const comicStyle = this.comicStyleSelect.value;
         const originalPageIndex = this.pageManager.getCurrentPageIndex();
 
@@ -552,12 +577,15 @@ class UIController {
                 const element = this.renderer.getContainer();
                 const sketchBase64 = await ComicExporter.getBase64WithoutText(element);
 
-                // Prepare reference images (use previous 2-3 generated pages)
+                // Prepare reference images (use previous 2 generated pages from member variable)
                 let previousPages = null;
-                if (generatedImages.length > 0) {
-                    // Use the last 2 pages as reference (or fewer if not available)
-                    const refCount = Math.min(2, generatedImages.length);
-                    previousPages = generatedImages.slice(-refCount);
+                const prevImages = Object.values(this.generatedPagesImages)
+                    .filter(img => img.pageIndex < i)
+                    .sort((a, b) => b.pageIndex - a.pageIndex)
+                    .slice(0, 2)
+                    .reverse();
+                if (prevImages.length > 0) {
+                    previousPages = prevImages;
                 }
 
                 // Generate image with sketch and previous pages as reference
@@ -571,11 +599,13 @@ class UIController {
                 );
 
                 if (result.success && result.image_url) {
-                    generatedImages.push({
+                    // Store in both local array and member variable
+                    const imageData = {
                         pageIndex: i,
                         imageUrl: result.image_url,
-                        pageTitle: pageData.title || `第 ${i + 1} 页`
-                    });
+                        pageTitle: pageData.title || `Page ${i + 1}`
+                    };
+                    this.generatedPagesImages[i] = imageData;
                 } else {
                     throw new Error(`第 ${i + 1} 页生成失败`);
                 }
@@ -590,7 +620,8 @@ class UIController {
 
             // Show success and display all generated images
             this.showStatus(window.i18n.t('statusAllSuccess', { total: totalPages }), 'success');
-            this.displayAllGeneratedImages(generatedImages);
+            const allImages = Object.values(this.generatedPagesImages).sort((a, b) => a.pageIndex - b.pageIndex);
+            this.displayAllGeneratedImages(allImages);
 
         } catch (error) {
             console.error('Batch generation failed:', error);
@@ -601,9 +632,10 @@ class UIController {
             this.loadCurrentPage();
 
             // If some images were generated, still show them
-            if (generatedImages.length > 0) {
-                alert(window.i18n.t('alertBatchError', { success: generatedImages.length, total: totalPages, error: error.message }));
-                this.displayAllGeneratedImages(generatedImages);
+            const partialImages = Object.values(this.generatedPagesImages).sort((a, b) => a.pageIndex - b.pageIndex);
+            if (partialImages.length > 0) {
+                alert(window.i18n.t('alertBatchError', { success: partialImages.length, total: totalPages, error: error.message }));
+                this.displayAllGeneratedImages(partialImages);
             } else {
                 alert(window.i18n.t('alertBatchFailed', { error: error.message }));
             }
