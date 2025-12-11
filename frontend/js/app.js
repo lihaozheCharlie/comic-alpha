@@ -52,8 +52,7 @@ class UIController {
         this.errorMsg = document.getElementById('error-msg');
         this.pageIndicator = document.getElementById('page-indicator');
         this.pageNav = document.getElementById('page-nav');
-        this.pageToolbar = document.getElementById('page-toolbar');
-        this.generateCurrentBtn = document.getElementById('generate-current-btn');
+        this.renderCurrentBtn = document.getElementById('render-current-btn');
     }
 
     /**
@@ -252,9 +251,9 @@ class UIController {
             // Update page manager
             this.pageManager.setPages(result.pages);
 
-            // Show page toolbar above comic page
-            if (this.pageToolbar) {
-                this.pageToolbar.style.display = 'flex';
+            // Show render current page button
+            if (this.renderCurrentBtn) {
+                this.renderCurrentBtn.style.display = 'inline-flex';
             }
 
             // Show navigation and generate all button if multiple pages
@@ -314,8 +313,8 @@ class UIController {
                 if (editHint) editHint.style.display = 'block';
                 if (previewContainer) previewContainer.classList.add('has-content');
 
-                // Show page toolbar
-                if (this.pageToolbar) this.pageToolbar.style.display = 'flex';
+                // Show render current page button
+                if (this.renderCurrentBtn) this.renderCurrentBtn.style.display = 'inline-flex';
 
                 // Check if we need to show Generate All button (if we have multiple pages)
                 if (this.pageManager.getPageCount() > 1) {
