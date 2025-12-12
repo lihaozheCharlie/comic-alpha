@@ -95,17 +95,6 @@ class ImageService:
 
         prompt_template = """Using the style of {comic_style}, convert the storyline in each panel of the reference image into corresponding comic content.
 
-# Requirements:
-- The content of each panel should avoid being overly complex.
-- Maintain consistency in characters and scenes.
-- Preserve the layout and proportions of the comic.
-- The comic title should use a {comic_style} font.
-- The image should be colorful and vibrant.
-- Do not show panel index in the content.
-- Include speech bubbles with short, clear dialogue to help tell the story.
-- Keep dialogue concise to avoid cluttering the image.
-- Ensure text is legible and spelled correctly.
-
 # Content:
 
 ## Title
@@ -113,6 +102,24 @@ class ImageService:
 
 ## Panels
 {panels}
+
+# Requirements:
+- The content of each panel should avoid being overly complex.
+- Maintain consistency in characters and scenes.
+- Preserve the layout and proportions of the comic.
+- The image should be colorful and vibrant.
+- Do not show panel index in the content.
+- Include speech bubbles with short, clear dialogue to help tell the story.
+- Keep dialogue concise to avoid cluttering the image.
+- Ensure text is legible and spelled correctly.
+- Display the title only once, typically at the top center of the comic page.
+- Do not duplicate the title in multiple locations.
+- Maintain consistent and uniform margins around the entire comic page.
+- Ensure equal spacing on all sides (top, bottom, left, right) for a professional appearance.
+- The comic title should use a {comic_style}-style font that matches the overall comic aesthetic.
+- Use fonts that properly support Chinese characters to prevent text corruption.
+- Ensure all Chinese text is correctly encoded and displayed without mojibake or garbled characters.
+- Text should be clear, sharp, and properly rendered in both speech bubbles and titles.
 """
         
         final_prompt = prompt_template.format(

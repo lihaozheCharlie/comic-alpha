@@ -678,14 +678,6 @@ class UIController {
                 box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
             `;
 
-            const title = document.createElement('div');
-            title.style.cssText = `
-                font-weight: bold;
-                margin-bottom: 10px;
-                font-size: 16px;
-            `;
-            title.innerText = img.pageTitle;
-
             const image = document.createElement('img');
             image.src = img.imageUrl;
             image.style.cssText = `
@@ -712,7 +704,6 @@ class UIController {
                 this.downloadImageFromUrl(img.imageUrl);
             };
 
-            card.appendChild(title);
             card.appendChild(image);
             card.appendChild(downloadBtn);
             gallery.appendChild(card);
