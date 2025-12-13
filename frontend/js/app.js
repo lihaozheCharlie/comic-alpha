@@ -396,6 +396,14 @@ class UIController {
             btn.disabled = true;
             btn.innerText = '生成中...';
 
+            // If we have a generated image, download it directly
+            const currentPageIndex = this.pageManager.getCurrentPageIndex();
+            if (this.generatedPagesImages && this.generatedPagesImages[currentPageIndex]) {
+                await this.downloadImageFromUrl(this.generatedPagesImages[currentPageIndex].imageUrl);
+                return;
+            }
+
+            // Otherwise download the sketch canvas
             const element = this.renderer.getContainer();
             const success = await ComicExporter.downloadPage(element);
 
@@ -479,8 +487,8 @@ class UIController {
                     pageTitle: pageData.title || `Page ${currentPageIndex + 1}`
                 };
 
-                // Show the generated image
-                this.displayGeneratedImage(result.image_url);
+                // Show the generated image on canvas with flip animation
+                await this.showGeneratedImageOnCanvas(result.image_url);
                 this.showStatus(window.i18n.t('statusImageSuccess'), 'success');
                 setTimeout(() => this.hideStatus(), 3000);
             } else {
@@ -583,6 +591,9 @@ class UIController {
                         pageTitle: pageData.title || `Page ${i + 1}`
                     };
                     this.generatedPagesImages[i] = imageData;
+
+                    // Show the generated image on canvas with flip animation
+                    await this.showGeneratedImageOnCanvas(result.image_url);
                 } else {
                     throw new Error(`第 ${i + 1} 页生成失败`);
                 }
@@ -595,10 +606,11 @@ class UIController {
             this.pageManager.setCurrentPageIndex(originalPageIndex);
             this.loadCurrentPage();
 
-            // Show success and display all generated images
+            // Show success
             this.showStatus(window.i18n.t('statusAllSuccess', { total: totalPages }), 'success');
-            const allImages = Object.values(this.generatedPagesImages).sort((a, b) => a.pageIndex - b.pageIndex);
-            this.displayAllGeneratedImages(allImages);
+            // No longer showing gallery popup as images are displayed on canvas
+            // const allImages = Object.values(this.generatedPagesImages).sort((a, b) => a.pageIndex - b.pageIndex);
+            // this.displayAllGeneratedImages(allImages);
 
         } catch (error) {
             console.error('Batch generation failed:', error);
@@ -623,156 +635,7 @@ class UIController {
         }
     }
 
-    /**
-     * Display all generated images in a gallery modal
-     * @param {Array} images - Array of generated image objects
-     */
-    displayAllGeneratedImages(images) {
-        if (!images || images.length === 0) return;
 
-        // Create modal overlay
-        const modal = document.createElement('div');
-        modal.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            display: flex;
-            flex-direction: column;
-            z-index: 10000;
-            overflow-y: auto;
-            padding: 20px;
-        `;
-
-        // Create header
-        const header = document.createElement('div');
-        header.style.cssText = `
-            color: white;
-            font-size: 24px;
-            font-weight: bold;
-            text-align: center;
-            margin-bottom: 20px;
-        `;
-        header.innerText = window.i18n.t('modalGeneratedTitle', { count: images.length });
-
-        // Create gallery container
-        const gallery = document.createElement('div');
-        gallery.style.cssText = `
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            max-width: 1400px;
-            margin: 0 auto;
-            width: 100%;
-        `;
-
-        // Add each image
-        images.forEach((img, index) => {
-            const card = document.createElement('div');
-            card.style.cssText = `
-                background: white;
-                border-radius: 8px;
-                padding: 15px;
-                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-            `;
-
-            const image = document.createElement('img');
-            image.src = img.imageUrl;
-            image.style.cssText = `
-                width: 100%;
-                height: auto;
-                display: block;
-                border-radius: 4px;
-                margin-bottom: 10px;
-            `;
-
-            const downloadBtn = document.createElement('button');
-            downloadBtn.innerText = window.i18n.t('btnDownloadThis');
-            downloadBtn.style.cssText = `
-                width: 100%;
-                padding: 8px;
-                background-color: #007bff;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                cursor: pointer;
-                font-size: 14px;
-            `;
-            downloadBtn.onclick = () => {
-                this.downloadImageFromUrl(img.imageUrl);
-            };
-
-            card.appendChild(image);
-            card.appendChild(downloadBtn);
-            gallery.appendChild(card);
-        });
-
-        // Create action buttons
-        const actions = document.createElement('div');
-        actions.style.cssText = `
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            margin-top: 20px;
-            max-width: 600px;
-            margin-left: auto;
-            margin-right: auto;
-        `;
-
-        const downloadAllBtn = document.createElement('button');
-        downloadAllBtn.innerText = window.i18n.t('btnDownloadAll');
-        downloadAllBtn.style.cssText = `
-            flex: 1;
-            padding: 12px 24px;
-            background-color: #28a745;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: bold;
-        `;
-        downloadAllBtn.onclick = async () => {
-            downloadAllBtn.disabled = true;
-            downloadAllBtn.innerText = window.i18n.t('btnDownloading');
-            for (let i = 0; i < images.length; i++) {
-                await this.downloadImageFromUrl(images[i].imageUrl);
-                await this._delay(500); // Delay between downloads
-            }
-            downloadAllBtn.disabled = false;
-            downloadAllBtn.innerText = window.i18n.t('btnDownloadAll');
-        };
-
-        const closeBtn = document.createElement('button');
-        closeBtn.innerText = window.i18n.t('btnClose');
-        closeBtn.style.cssText = `
-            flex: 1;
-            padding: 12px 24px;
-            background-color: #6c757d;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: bold;
-        `;
-        closeBtn.onclick = () => {
-            document.body.removeChild(modal);
-        };
-
-        actions.appendChild(downloadAllBtn);
-        actions.appendChild(closeBtn);
-
-        // Assemble modal
-        modal.appendChild(header);
-        modal.appendChild(gallery);
-        modal.appendChild(actions);
-
-        // Add to page
-        document.body.appendChild(modal);
-    }
 
     /**
      * Delay helper
@@ -784,103 +647,39 @@ class UIController {
     }
 
     /**
-     * Display generated image in a modal or new window
+     * Show generated image on the comic canvas directly with a flip animation
      * @param {string} imageUrl - URL of the generated image
      */
-    displayGeneratedImage(imageUrl) {
-        // Create modal overlay
-        const modal = document.createElement('div');
-        modal.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 10000;
-            cursor: pointer;
-        `;
+    async showGeneratedImageOnCanvas(imageUrl) {
+        const comicPage = document.getElementById('comic-page');
+        if (!comicPage) return;
 
-        // Create image container
-        const imgContainer = document.createElement('div');
-        imgContainer.style.cssText = `
-            max-width: 90%;
-            max-height: 90%;
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-        `;
+        // 1. Flip out
+        comicPage.classList.add('flip-out');
 
-        // Create image
+        // 2. Wait for half animation (rotate to 90deg)
+        await this._delay(600);
+
+        // 3. Swap content
+        comicPage.innerHTML = '';
         const img = document.createElement('img');
         img.src = imageUrl;
-        img.style.cssText = `
-            max-width: 100%;
-            max-height: 80vh;
-            display: block;
-        `;
+        img.className = 'generated-comic-image';
+        comicPage.appendChild(img);
 
-        // Create download button
-        const downloadBtn = document.createElement('button');
-        downloadBtn.innerText = window.i18n.t('btnDownloadImage');
-        downloadBtn.style.cssText = `
-            margin-top: 15px;
-            padding: 10px 20px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-            width: 100%;
-        `;
-        downloadBtn.onclick = (e) => {
-            e.stopPropagation();
-            this.downloadImageFromUrl(imageUrl);
-        };
+        // Ensure scroll to top
+        comicPage.scrollTop = 0;
 
-        // Create close button
-        const closeBtn = document.createElement('button');
-        closeBtn.innerText = window.i18n.t('btnClose');
-        closeBtn.style.cssText = `
-            margin-top: 10px;
-            padding: 10px 20px;
-            background-color: #6c757d;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-            width: 100%;
-        `;
-        closeBtn.onclick = (e) => {
-            e.stopPropagation();
-            document.body.removeChild(modal);
-        };
+        // 4. Flip in
+        comicPage.classList.remove('flip-out');
+        comicPage.classList.add('flip-in');
 
-        // Assemble modal
-        imgContainer.appendChild(img);
-        imgContainer.appendChild(downloadBtn);
-        imgContainer.appendChild(closeBtn);
-        modal.appendChild(imgContainer);
-
-        // Close on background click
-        modal.onclick = () => {
-            document.body.removeChild(modal);
-        };
-
-        // Prevent closing when clicking on image container
-        imgContainer.onclick = (e) => {
-            e.stopPropagation();
-        };
-
-        // Add to page
-        document.body.appendChild(modal);
+        // 5. Cleanup classes after animation
+        await this._delay(800);
+        comicPage.classList.remove('flip-in');
     }
+
+
 
     /**
      * Download image from URL
