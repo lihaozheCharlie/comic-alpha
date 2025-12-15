@@ -176,10 +176,11 @@ class ImageService:
 - The image must be a vertical comic book cover composition.
 - The art style must strictly follow {comic_style}.
 - Make it eye-catching and dramatic.
-- Include a main character or scene that represents the story.
 - High resolution, detailed, and professional quality.
 - No other text except the title.
+- Clear and sharp text for the title, do not repeat all the titles in reference images.
 - Vibrant colors and "Cover Art" aesthetic.
+- Only present one row one panel in the cover.
 """
         final_prompt = prompt_template.format(comic_style=comic_style)
         print(f"Cover Prompt: {final_prompt}")

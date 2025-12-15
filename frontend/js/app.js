@@ -313,12 +313,13 @@ class UIController {
             this.errorMsg.style.display = 'none';
 
             if (this.renderer.render(data)) {
-                // Reset generated images for the new content
-                this.generatedPagesImages = {};
+                // Don't reset generated images when rendering existing pages
+                // Only reset when loading completely new content from user input
+                // This is handled in generateWithAI() instead
 
-                // Hide cover generation button
+                // Hide cover generation button only if we don't have any generated images
                 const coverBtn = document.getElementById('generate-cover-btn');
-                if (coverBtn) {
+                if (coverBtn && Object.keys(this.generatedPagesImages).length === 0) {
                     coverBtn.style.display = 'none';
                 }
 
@@ -385,16 +386,6 @@ class UIController {
         const pageIndex = this.pageManager.getCurrentPageIndex();
         if (this.generatedPagesImages && this.generatedPagesImages[pageIndex]) {
             // If we have an image, show it directly (no animation needed for navigation)
-            this.displayImageDirectly(this.generatedPagesImages[pageIndex].imageUrl);
-
-            // Also need to render the underlying comic structure for the renderer state
-            // but we hide it or valid rendering happens before we replace content?
-            // Actually, we should just let renderComic run to update state, then replace content?
-            // Or just skip renderComic if we show image?
-            // Better: update renderer state but overwrite DOM.
-            // But renderer.render overwrites DOM. 
-            // So: render first, then overwrite if image exists.
-            this.renderComic();
             this.displayImageDirectly(this.generatedPagesImages[pageIndex].imageUrl);
         } else {
             // Render sketch
@@ -646,6 +637,10 @@ class UIController {
 
             // Restore original page
             this.pageManager.setCurrentPageIndex(originalPageIndex);
+
+            console.log('[Batch Generation] Complete! Generated images:', this.generatedPagesImages);
+            console.log('[Batch Generation] Total images generated:', Object.keys(this.generatedPagesImages).length);
+
             this.loadCurrentPage();
 
             // Show success
@@ -1171,9 +1166,14 @@ class UIController {
             // Collect all generated page images as references
             const referenceImages = [];
             if (this.generatedPagesImages) {
+                console.log('[Cover] generatedPagesImages:', this.generatedPagesImages);
+                console.log('[Cover] generatedPagesImages keys:', Object.keys(this.generatedPagesImages));
+
                 // Get all page objects and sort by index
                 const sortedPages = Object.values(this.generatedPagesImages)
                     .sort((a, b) => a.pageIndex - b.pageIndex);
+
+                console.log('[Cover] Sorted pages:', sortedPages);
 
                 // Add full page objects to reference list
                 sortedPages.forEach(page => {
@@ -1182,6 +1182,8 @@ class UIController {
                     }
                 });
             }
+
+            console.log('[Cover] Reference images to send:', referenceImages);
 
             // Call API
             const result = await ComicAPI.generateCover(

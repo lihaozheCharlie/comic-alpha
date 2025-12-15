@@ -68,12 +68,13 @@ def generate_comic_cover_endpoint():
     Expected JSON body:
     {
         "comic_style": "doraemon",
-        "google_api_key": "your-google-api-key"
+        "google_api_key": "your-google-api-key",
+        "reference_imgs": [...]  # optional reference images
     }
     """
     try:
         data = request.get_json()
-        print(data)
+        print(f"[Cover Generation] Received data: {data}")
         
         if not data:
             return jsonify({"error": "No JSON data provided"}), 400
@@ -84,6 +85,10 @@ def generate_comic_cover_endpoint():
         
         comic_style = data.get('comic_style', 'doraemon')
         reference_imgs = data.get('reference_imgs')
+        
+        print(f"[Cover Generation] Reference images count: {len(reference_imgs) if reference_imgs else 0}")
+        if reference_imgs:
+            print(f"[Cover Generation] First reference: {reference_imgs[0] if len(reference_imgs) > 0 else 'None'}")
         
         # Generate cover using service
         image_url, prompt = ImageService.generate_comic_cover(
