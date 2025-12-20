@@ -83,7 +83,7 @@ const i18n = {
             statusSuccess: '✓ 生成成功！共{count}页',
             statusError: '✗ 生成失败: {error}',
             statusPreparing: '正在准备草图...',
-            statusGeneratingImage: '正在生成最终漫画图片...',
+            statusGeneratingImage: '正在生成当前漫画图片...',
             statusImageSuccess: '✓ 图片生成成功！',
             statusGeneratingPage: '正在生成第 {current}/{total} 页...',
             statusAllSuccess: '✓ 所有 {total} 页生成成功！',
@@ -134,6 +134,21 @@ const i18n = {
             statusGeneratingCover: '封面生成中...',
             modalCoverTitle: '漫画封面',
 
+
+            // Session management
+            sessionTitle: '会话管理',
+            newSession: '新建会话',
+            renameSession: '重命名',
+            deleteSession: '删除',
+            switchSession: '切换',
+            sessionName: '会话名称',
+            confirmDeleteSession: '确定要删除此会话吗？',
+            defaultSessionName: '会话',
+            alertLastSession: '无法删除最后一个会话',
+            alertStorageFull: '存储空间已满，请删除一些会话或清除浏览器数据',
+            confirmClearAll: '确定要删除所有会话吗？此操作无法撤销。',
+            sessionListTitle: '所有会话',
+            currentSession: '当前会话',
 
             // Errors
             // Language switcher
@@ -214,7 +229,7 @@ const i18n = {
             statusSuccess: '✓ Generated successfully! {count} pages',
             statusError: '✗ Generation failed: {error}',
             statusPreparing: 'Preparing sketch...',
-            statusGeneratingImage: 'Generating final comic image...',
+            statusGeneratingImage: 'Generating current comic image...',
             statusImageSuccess: '✓ Image generated successfully!',
             statusGeneratingPage: 'Generating page {current}/{total}...',
             statusAllSuccess: '✓ All {total} pages generated successfully!',
@@ -265,6 +280,21 @@ const i18n = {
             statusGeneratingCover: 'Generating Cover...',
             modalCoverTitle: 'Comic Cover',
 
+
+            // Session management
+            sessionTitle: 'Session Management',
+            newSession: 'New Session',
+            renameSession: 'Rename',
+            deleteSession: 'Delete',
+            switchSession: 'Switch',
+            sessionName: 'Session Name',
+            confirmDeleteSession: 'Are you sure you want to delete this session?',
+            defaultSessionName: 'Session',
+            alertLastSession: 'Cannot delete the last session',
+            alertStorageFull: 'Storage quota exceeded. Please delete some sessions or clear browser data.',
+            confirmClearAll: 'Are you sure you want to delete all sessions? This cannot be undone.',
+            sessionListTitle: 'All Sessions',
+            currentSession: 'Current Session',
 
             // Errors
             // Language switcher

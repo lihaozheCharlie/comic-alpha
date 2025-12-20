@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>comic-perfect</title>
     <link rel="icon" type="image/jpeg" href="assets/favicon.jpeg">
-    <link rel="stylesheet" href="frontend/css/style.css">
+    <link rel="stylesheet" href="frontend/css/style.css?v=2">
 </head>
 
 <body>
@@ -136,6 +136,30 @@
             <div id="ai-status"></div>
         </div>
 
+        <!-- Session Management Section -->
+        <div class="session-section">
+            <div class="session-header">
+                <select id="session-selector" class="session-selector-large" onchange="switchToSession(this.value)">
+                    <!-- Sessions will be populated by JavaScript -->
+                </select>
+                <div class="session-actions-row">
+                    <button onclick="createNewSession()" class="session-action-icon-btn" title="New Session">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                        </svg>
+                    </button>
+                    <button onclick="toggleSessionManager()" class="session-action-icon-btn" title="Manage Sessions">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
+                            <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
+                            <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
+                            <rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <h3 style="display: none;">分镜脚本 (JSON)
             <span id="page-indicator"></span>
         </h3>
@@ -170,18 +194,30 @@
         </div>
     </div>
 
+    <!-- Session Management Modal -->
+    <div id="session-modal" class="modal" style="display: none;">
+        <div class="modal-content session-modal-content">
+            <div class="modal-header">
+                <h3 data-i18n="sessionTitle">Session Management</h3>
+                <button onclick="toggleSessionManager()" class="modal-close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="session-list" class="session-list">
+                    <!-- Sessions will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Prompt Input Section - Fixed at Bottom -->
     <div class="prompt-section-fixed">
         <div class="prompt-wrapper">
             <textarea id="prompt-input" data-i18n="promptPlaceholder"
                 placeholder="描述你想要的漫画内容，例如：生成一个关于小明学习编程的故事"></textarea>
             <button onclick="generateWithAI()" class="run-btn" id="run-btn" title="Run">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M22 2L11 13" stroke="white" stroke-width="2.5" stroke-linecap="round"
-                        stroke-linejoin="round" />
-                    <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="white" stroke-width="2.5" stroke-linecap="round"
-                        stroke-linejoin="round" />
-                </svg>
+                <span class="btn-text">Run</span>
+
+                <span class="shortcut-hint">⌘ ↵</span>
             </button>
             <!-- Render Current Page Button -->
             <button onclick="generateFinalImage()" class="render-btn" id="render-current-btn" style="display: none;">
@@ -220,14 +256,15 @@
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
     <!-- Application Modules -->
-    <script src="frontend/js/i18n.js?v=4"></script>
+    <script src="frontend/js/i18n.js?v=5"></script>
     <script src="frontend/js/theme.js?v=4"></script>
     <script src="frontend/js/config.js?v=4"></script>
     <script src="frontend/js/api.js?v=4"></script>
     <script src="frontend/js/renderer.js?v=4"></script>
     <script src="frontend/js/pageManager.js?v=4"></script>
     <script src="frontend/js/exporter.js?v=4"></script>
-    <script src="frontend/js/app.js?v=4"></script>
+    <script src="frontend/js/sessionManager.js?v=1"></script>
+    <script src="frontend/js/app.js?v=5"></script>
 </body>
 
 </html>

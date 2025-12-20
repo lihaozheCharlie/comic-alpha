@@ -9,6 +9,9 @@ class UIController {
         this.isGenerating = false;
         this.generatedPagesImages = {}; // Store generated images by page index for reference
 
+        // Initialize session manager
+        this.sessionManager = new SessionManager();
+
         // Initialize i18n
         if (window.i18n) {
             window.i18n.init();
@@ -18,6 +21,15 @@ class UIController {
         this.initEventListeners();
         this.loadInitialConfig();
         this.initLanguage();
+
+        // Load current session state
+        this.loadSessionState();
+
+        // Update session selector UI
+        this.updateSessionSelector();
+
+        // Initialize button state
+        this.updateGenerateButtonState();
     }
 
     /**
@@ -91,6 +103,24 @@ class UIController {
                 this.generateWithAI();
             }
         });
+
+        // Input validation for generate button
+        this.promptInput.addEventListener('input', () => {
+            this.updateGenerateButtonState();
+        });
+    }
+
+    /**
+     * Update generate button state based on input
+     */
+    updateGenerateButtonState() {
+        if (!this.generateBtn || !this.promptInput) return;
+
+        // Don't change state if currently generating
+        if (this.isGenerating) return;
+
+        const prompt = this.promptInput.value.trim();
+        this.generateBtn.disabled = prompt === '';
     }
 
     /**
@@ -289,11 +319,14 @@ class UIController {
             alert(errorMsg);
         } finally {
             this.isGenerating = false;
-            this.generateBtn.disabled = false;
+            this.updateGenerateButtonState();
             this.generateBtn.classList.remove('loading');
             if (typeof originalBtnContent !== 'undefined') {
                 this.generateBtn.innerHTML = originalBtnContent;
             }
+
+            // Save session state
+            this.saveCurrentSessionState();
         }
     }
 
@@ -399,6 +432,7 @@ class UIController {
     prevPage() {
         if (this.pageManager.prevPage()) {
             this.loadCurrentPage();
+            this.saveCurrentSessionState();
         }
     }
 
@@ -408,6 +442,7 @@ class UIController {
     nextPage() {
         if (this.pageManager.nextPage()) {
             this.loadCurrentPage();
+            this.saveCurrentSessionState();
         }
     }
 
@@ -524,6 +559,9 @@ class UIController {
                     coverBtn.style.display = 'inline-flex';
                     coverBtn.disabled = false;
                 }
+
+                // Save session state immediately
+                this.saveCurrentSessionState();
             } else {
                 throw new Error('Image generation failed');
             }
@@ -627,6 +665,9 @@ class UIController {
 
                     // Show the generated image on canvas with flip animation
                     await this.showGeneratedImageOnCanvas(result.image_url);
+
+                    // Save session state after each page generation
+                    this.saveCurrentSessionState();
                 } else {
                     throw new Error(`第 ${i + 1} 页生成失败`);
                 }
@@ -1213,6 +1254,314 @@ class UIController {
             }
         }
     }
+
+    /**
+     * Save current session state
+     */
+    saveCurrentSessionState() {
+        if (!this.sessionManager) return;
+
+        const comicData = this.pageManager.getPageCount() > 0 ? {
+            pages: this.pageManager.pages,
+            pageCount: this.pageManager.getPageCount()
+        } : null;
+
+        this.sessionManager.updateCurrentSession({
+            comicData: comicData,
+            generatedImages: this.generatedPagesImages,
+            currentPageIndex: this.pageManager.getCurrentPageIndex()
+        });
+    }
+
+    /**
+     * Load session state
+     */
+    loadSessionState() {
+        if (!this.sessionManager) return;
+
+        const session = this.sessionManager.getCurrentSession();
+        if (!session) return;
+
+        // Restore comic data
+        if (session.comicData && session.comicData.pages) {
+            this.pageManager.setPages(session.comicData.pages);
+            this.pageManager.setCurrentPageIndex(session.currentPageIndex || 0);
+
+            // Update JSON input
+            const currentPage = this.pageManager.getCurrentPage();
+            if (currentPage) {
+                this.jsonInput.value = JSON.stringify(currentPage, null, 2);
+            }
+
+            // Render the page
+            this.renderComic();
+
+            // Show navigation if multiple pages
+            if (session.comicData.pageCount > 1) {
+                this.pageNav.style.display = 'flex';
+                this.generateAllBtn.style.display = 'inline-flex';
+            }
+
+            // Show render button
+            if (this.renderCurrentBtn) {
+                this.renderCurrentBtn.style.display = 'inline-flex';
+            }
+        }
+
+        // Restore generated images
+        if (session.generatedImages) {
+            this.generatedPagesImages = session.generatedImages;
+
+            // Show cover button if we have generated images
+            if (Object.keys(this.generatedPagesImages).length > 0) {
+                const coverBtn = document.getElementById('generate-cover-btn');
+                if (coverBtn) {
+                    coverBtn.style.display = 'inline-flex';
+                }
+            }
+        }
+
+        // Load current page (will show generated image if available)
+        if (this.pageManager.getPageCount() > 0) {
+            this.loadCurrentPage();
+        }
+    }
+
+    /**
+     * Switch to a different session
+     * @param {string} sessionId - Session ID to switch to
+     */
+    switchToSession(sessionId) {
+        if (!this.sessionManager) return;
+
+        // Save current session state before switching
+        this.saveCurrentSessionState();
+
+        // Switch session
+        const session = this.sessionManager.switchSession(sessionId);
+        if (!session) return;
+
+        // Clear and reset current state
+        this.generatedPagesImages = {};
+        this.pageManager.setPages([]);
+        this.jsonInput.value = '';
+
+        // Reset UI elements to clean state
+        const comicPage = document.getElementById('comic-page');
+        if (comicPage) {
+            comicPage.style.display = 'none';
+            comicPage.innerHTML = ''; // Clear actual content
+        }
+
+        const editHint = document.querySelector('.edit-hint');
+        if (editHint) editHint.style.display = 'none';
+
+        if (this.pageNav) this.pageNav.style.display = 'none';
+        if (this.generateAllBtn) this.generateAllBtn.style.display = 'none';
+        if (this.renderCurrentBtn) this.renderCurrentBtn.style.display = 'none';
+
+        const coverBtn = document.getElementById('generate-cover-btn');
+        if (coverBtn) coverBtn.style.display = 'none';
+
+        // Load new session state
+        this.loadSessionState();
+
+        // Update UI
+        this.updateSessionSelector();
+    }
+
+    /**
+     * Create a new session
+     */
+    createNewSession() {
+        if (!this.sessionManager) return;
+
+        // Save current session state
+        this.saveCurrentSessionState();
+
+        // Create new session
+        const sessionCount = this.sessionManager.getAllSessions().length + 1;
+        const defaultName = (window.i18n ? window.i18n.t('defaultSessionName') : 'Session') + ' ' + sessionCount;
+        const session = this.sessionManager.createSession(defaultName);
+
+        // Switch to new session
+        this.sessionManager.switchSession(session.id);
+
+        // Clear current state
+        this.generatedPagesImages = {};
+        this.pageManager.setPages([]);
+        this.jsonInput.value = '';
+
+        // Hide UI elements
+        const comicPage = document.getElementById('comic-page');
+        if (comicPage) comicPage.style.display = 'none';
+
+        const editHint = document.querySelector('.edit-hint');
+        if (editHint) editHint.style.display = 'none';
+
+        this.pageNav.style.display = 'none';
+        if (this.generateAllBtn) this.generateAllBtn.style.display = 'none';
+        if (this.renderCurrentBtn) this.renderCurrentBtn.style.display = 'none';
+
+        const coverBtn = document.getElementById('generate-cover-btn');
+        if (coverBtn) coverBtn.style.display = 'none';
+
+        // Update UI
+        this.updateSessionSelector();
+    }
+
+    /**
+     * Update session selector dropdown
+     */
+    updateSessionSelector() {
+        if (!this.sessionManager) return;
+
+        const selector = document.getElementById('session-selector');
+        if (!selector) return;
+
+        const sessions = this.sessionManager.getAllSessions();
+        const currentSessionId = this.sessionManager.getCurrentSession()?.id;
+
+        selector.innerHTML = '';
+        sessions.forEach(session => {
+            const option = document.createElement('option');
+            option.value = session.id;
+            option.textContent = session.name;
+            if (session.id === currentSessionId) {
+                option.selected = true;
+            }
+            selector.appendChild(option);
+        });
+    }
+
+    /**
+     * Toggle session management modal
+     */
+    toggleSessionManager() {
+        const modal = document.getElementById('session-modal');
+        if (!modal) return;
+
+        if (modal.style.display === 'none' || !modal.style.display) {
+            // Show modal and populate session list
+            this.updateSessionList();
+            modal.style.display = 'flex';
+        } else {
+            modal.style.display = 'none';
+        }
+    }
+
+    /**
+     * Update session list in modal
+     */
+    updateSessionList() {
+        if (!this.sessionManager) return;
+
+        const listContainer = document.getElementById('session-list');
+        if (!listContainer) return;
+
+        const sessions = this.sessionManager.getAllSessions();
+        const currentSessionId = this.sessionManager.getCurrentSession()?.id;
+
+        listContainer.innerHTML = '';
+
+        sessions.forEach(session => {
+            const item = document.createElement('div');
+            item.className = 'session-item' + (session.id === currentSessionId ? ' active' : '');
+
+            const info = document.createElement('div');
+            info.className = 'session-info';
+
+            const name = document.createElement('div');
+            name.className = 'session-name';
+            name.textContent = session.name;
+
+            const meta = document.createElement('div');
+            meta.className = 'session-meta';
+            const date = new Date(session.updatedAt);
+            meta.textContent = date.toLocaleString();
+
+            info.appendChild(name);
+            info.appendChild(meta);
+
+            const actions = document.createElement('div');
+            actions.className = 'session-actions';
+
+            // Rename button
+            const renameBtn = document.createElement('button');
+            renameBtn.className = 'session-action-btn';
+            renameBtn.innerHTML = '✏️';
+            renameBtn.title = window.i18n ? window.i18n.t('renameSession') : 'Rename';
+            renameBtn.onclick = () => this.renameSession(session.id);
+
+            // Delete button
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'session-action-btn delete';
+            deleteBtn.innerHTML = '🗑️';
+            deleteBtn.title = window.i18n ? window.i18n.t('deleteSession') : 'Delete';
+            deleteBtn.onclick = () => this.deleteSession(session.id);
+
+            // Switch button (if not current)
+            if (session.id !== currentSessionId) {
+                const switchBtn = document.createElement('button');
+                switchBtn.className = 'session-action-btn primary';
+                switchBtn.textContent = window.i18n ? window.i18n.t('switchSession') : 'Switch';
+                switchBtn.onclick = () => {
+                    this.switchToSession(session.id);
+                    this.toggleSessionManager();
+                };
+                actions.appendChild(switchBtn);
+            }
+
+            actions.appendChild(renameBtn);
+            actions.appendChild(deleteBtn);
+
+            item.appendChild(info);
+            item.appendChild(actions);
+            listContainer.appendChild(item);
+        });
+    }
+
+    /**
+     * Rename a session
+     * @param {string} sessionId - Session ID to rename
+     */
+    renameSession(sessionId) {
+        if (!this.sessionManager) return;
+
+        const session = this.sessionManager.getSession(sessionId);
+        if (!session) return;
+
+        const newName = prompt(
+            window.i18n ? window.i18n.t('sessionName') : 'Session Name',
+            session.name
+        );
+
+        if (newName && newName.trim()) {
+            this.sessionManager.renameSession(sessionId, newName.trim());
+            this.updateSessionList();
+            this.updateSessionSelector();
+        }
+    }
+
+    /**
+     * Delete a session
+     * @param {string} sessionId - Session ID to delete
+     */
+    deleteSession(sessionId) {
+        if (!this.sessionManager) return;
+
+        const confirmMsg = window.i18n ? window.i18n.t('confirmDeleteSession') : 'Are you sure you want to delete this session?';
+        if (!confirm(confirmMsg)) return;
+
+        const success = this.sessionManager.deleteSession(sessionId);
+        if (success) {
+            this.updateSessionList();
+            this.updateSessionSelector();
+
+            // If we deleted the current session, load the new current session
+            this.loadSessionState();
+        }
+    }
 }
 
 // Initialize app when DOM is ready
@@ -1281,6 +1630,19 @@ function changeLanguage(lang) {
     if (comicLanguageSelect) {
         comicLanguageSelect.value = lang;
     }
+}
+
+// Session management global functions
+function switchToSession(sessionId) {
+    if (app) app.switchToSession(sessionId);
+}
+
+function createNewSession() {
+    if (app) app.createNewSession();
+}
+
+function toggleSessionManager() {
+    if (app) app.toggleSessionManager();
 }
 
 /**
