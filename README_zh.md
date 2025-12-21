@@ -109,15 +109,19 @@ comic_alpha/
 
 ### 1. 安装后端依赖
 
+本项目使用 [uv](https://github.com/astral-sh/uv) 进行极速依赖管理。
+
 ```bash
 cd backend
-pip install -r requirements.txt
+# 使用 uv 同步依赖（自动创建虚拟环境）
+uv sync
 ```
 
 ### 2. 启动后端服务
 
 ```bash
-python app.py
+# 使用 uv 运行应用
+uv run app.py
 ```
 
 后端服务将在 `http://localhost:5003` 启动。

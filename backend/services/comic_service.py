@@ -2,6 +2,24 @@
 import openai
 import json
 from typing import List, Dict, Any
+from langchain_openai import ChatOpenAI
+from langchain_core.messages import HumanMessage, SystemMessage
+from pydantic import BaseModel, Field
+
+
+class Panel(BaseModel):
+    text: str = Field(description="分镜描述文字")
+
+class Row(BaseModel):
+    height: str = Field(description="行高度，例如 '180px'")
+    panels: List[Panel]
+
+class ComicPage(BaseModel):
+    title: str = Field(description="页标题")
+    rows: List[Row]
+
+class ComicScript(BaseModel):
+    pages: List[ComicPage] = Field(description="漫画面板页面列表")
 
 
 class ComicService:
@@ -13,8 +31,6 @@ class ComicService:
         self.model = model
         self.comic_style = comic_style
         self.language = language
-        openai.api_key = api_key
-        openai.api_base = base_url
     
     def generate_comic_script(self, prompt: str, page_count: int = 3) -> List[Dict[str, Any]]:
         """
@@ -48,76 +64,47 @@ class ComicService:
         style_desc = style_descriptions.get(self.comic_style, style_descriptions["doraemon"])
         language_instruction = language_instructions.get(self.language, language_instructions["zh"])
         
-        system_prompt = f"""你是一个专业的漫画分镜脚本编写助手。请根据用户的描述，生成{page_count}页漫画的分镜脚本。
+        system_prompt = f"""You are a professional comic storyboard script assistant. Please generate a {page_count}-page comic storyboard script based on the user's description.
 
-**重要：请使用{style_desc}来设计分镜内容。**
+**IMPORTANT: Please use {style_desc} to design the storyboard content.**
 
-**语言要求：{language_instruction}**
+**Language Requirement: {language_instruction}**
 
-返回格式为JSON数组，每个元素代表一页：
+Please strictly follow the provided Schema structure to generate the storyboard script:
 
-[
-  {{
-    "title": "第1页标题",
-    "rows": [
-      {{
-        "height": "180px",
-        "panels": [
-          {{ "text": "分镜描述文字" }}
-        ]
-      }}
-    ]
-  }},
-  {{
-    "title": "第2页标题",
-    "rows": [...]
-  }}
-]
+1. **Story Structure**:
+   - Generate a complete and coherent {page_count}-page story.
+   - Each page (ComicPage) should contain 3-5 rows (Rows).
+   - **Pacing Control**: Each row can contain 1-3 panels (Panels). Avoid having only 1 panel per row entirely; use rows with 2-3 panels frequently to add dynamism and pacing variation.
 
-要求：
-1. 生成{page_count}页完整的故事
-2. 每页有独立的title
-3. 每页漫画3-5行，合理安排剧情节奏
-4. 每行可以有1-2个面板（尽量不要每行都是1个面板）
-5. 分镜描述要简洁生动，推动故事发展，并体现所选风格的特点
-6. 只返回JSON数组，不要有其他解释文字
-7. 所有文本内容必须使用指定的语言"""
+2. **Visual Design (Critical)**:
+   - **Row Height**: Dynamically adjust `height` based on the importance of the panels.
+     - Standard shots/dialogue: Use '250px'.
+     - Key actions/emphasis shots: Use '350px' or '400px'.
+     - Avoid using the same height for all rows.
+   - **Panel Description**: The `text` field MUST contain specific visual descriptions (e.g., camera angle, facial expressions, body language, background details).
+   - Descriptions should fully reflect the visual style of {self.comic_style}.
+
+3. **Language**:
+   - All content (titles, descriptions) must follow the language requirement: {language_instruction}"""
 
         try:
-            response = openai.ChatCompletion.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": prompt}
+            llm = ChatOpenAI(model=self.model, openai_api_key=self.api_key, base_url=self.base_url, temperature=0.7, max_tokens=3000)
+            structured_llm = llm.with_structured_output(ComicScript)
+            response: ComicScript = structured_llm.invoke(
+                input=[
+                    SystemMessage(content=system_prompt),
+                    HumanMessage(content=prompt)
                 ],
-                temperature=0.7,
-                max_tokens=3000
             )
             
-            generated_text = response.choices[0].message.content.strip()
-            
-            # Extract JSON from markdown code blocks if present
-            json_text = self._extract_json(generated_text)
-            
             # Parse and validate JSON
-            comic_data = json.loads(json_text)
-            
-            # Ensure it's an array
-            if not isinstance(comic_data, list):
-                comic_data = [comic_data]
+            comic_data = [elem.model_dump() for elem in response.pages]
             
             return comic_data
             
         except Exception as e:
             raise Exception(f"AI generation failed: {str(e)}")
-    
-    def _extract_json(self, text: str) -> str:
-        """Extract JSON from text, removing markdown code blocks"""
-        if '```json' in text:
-            return text.split('```json')[1].split('```')[0].strip()
-        elif '```' in text:
-            return text.split('```')[1].split('```')[0].strip()
-        return text
 
 
 def validate_script(script) -> tuple[bool, str]:

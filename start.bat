@@ -4,28 +4,30 @@ REM Comic Generator Startup Script for Windows
 echo 🎨 漫画分镜生成器启动脚本
 echo ================================
 
-REM Check if Python is installed
-python --version >nul 2>&1
+REM Check if uv is installed
+uv --version >nul 2>&1
 if errorlevel 1 (
-    echo ❌ 错误: 未找到 Python，请先安装 Python 3.8+
+    echo ❌ 错误: 未找到 uv，请先安装 uv
+    echo 💡 Windows PowerShell 安装: powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
     pause
     exit /b 1
 )
 
-REM Check if backend dependencies are installed
-if not exist "backend\venv" (
-    echo 📦 首次运行，正在创建虚拟环境...
-    python -m venv backend\venv
-    
-    echo 📦 安装后端依赖...
-    call backend\venv\Scripts\activate.bat
-    pip install -r backend\requirements.txt
-    call deactivate
+REM Sync dependencies
+echo 📦 检查并安装依赖...
+cd backend
+call uv sync
+if errorlevel 1 (
+    echo ❌ 依赖安装失败
+    cd ..
+    pause
+    exit /b 1
 )
+cd ..
 
 REM Start backend server
 echo 🚀 启动后端服务...
-start "Comic Backend" cmd /k "cd backend && ..\backend\venv\Scripts\activate.bat && python app.py"
+start "Comic Backend" cmd /k "cd backend && uv run app.py"
 
 timeout /t 2 /nobreak >nul
 

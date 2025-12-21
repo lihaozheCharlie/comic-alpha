@@ -109,15 +109,19 @@ comic_alpha/
 
 ### 1. Install Backend Dependencies
 
+This project uses [uv](https://github.com/astral-sh/uv) for fast dependency management.
+
 ```bash
 cd backend
-pip install -r requirements.txt
+# Sync dependencies using uv (automatically creates a virtual environment)
+uv sync
 ```
 
 ### 2. Start Backend Service
 
 ```bash
-python app.py
+# Run the application using uv
+uv run app.py
 ```
 
 The backend service will start at `http://localhost:5003`.
