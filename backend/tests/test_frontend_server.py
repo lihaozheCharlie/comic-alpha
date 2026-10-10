@@ -24,6 +24,14 @@ class FrontendServerAllowlistTest(unittest.TestCase):
             REPOSITORY_ROOT / "assets" / "favicon.jpeg",
             resolve_public_file("/assets/favicon.jpeg"),
         )
+        for prototype_file in (
+            "index.html", "prototype.css", "prototype.js", "demo-data.js"
+        ):
+            with self.subTest(prototype_file=prototype_file):
+                self.assertEqual(
+                    REPOSITORY_ROOT / "frontend" / "design" / prototype_file,
+                    resolve_public_file(f"/frontend/design/{prototype_file}"),
+                )
         generated_images_dir = (
             REPOSITORY_ROOT / "backend" / "static" / "images"
         )

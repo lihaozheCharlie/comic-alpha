@@ -109,6 +109,32 @@ body {
     background: var(--scrollbar-thumb-hover);
 }
 
+.design-prototype-entry {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 12px;
+    margin-bottom: 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--ai-section-bg);
+    color: var(--text-primary);
+    font-size: 14px;
+    line-height: 1.5;
+    text-decoration: none;
+}
+
+.design-prototype-entry:hover {
+    border-color: var(--text-secondary);
+}
+
+.design-prototype-entry:focus-visible {
+    outline: 2px solid var(--text-primary);
+    outline-offset: 3px;
+}
+
 /* Header Row */
 .header-row {
     display: flex;
