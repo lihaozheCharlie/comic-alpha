@@ -4,6 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+        if (new URLSearchParams(window.location.search).get('console') !== 'original') {
+            window.location.replace('frontend/design/index.html');
+        }
+    </script>
     <title>comic-perfect</title>
     <link rel="icon" type="image/jpeg" href="assets/favicon.jpeg">
     <link rel="stylesheet" href="frontend/css/style.css?v=14">
