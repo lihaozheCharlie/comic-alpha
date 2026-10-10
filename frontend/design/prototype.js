@@ -13,6 +13,7 @@ const state = {
   pages: createDemoPages(),
   page: 1,
   panel: 1,
+  editing: false,
   view: "script",
   running: false,
   changed: new Set(),
@@ -52,30 +53,30 @@ function updateSaveStatus() {
       ? state.reviewFailed
         ? "review 草稿保存失败 · 演示"
         : "review 草稿已保存 · 演示"
-      : "修改保留在本次演示";
+      : state.changed.size
+        ? "已修改 · 演示"
+        : "";
 }
 
 function renderPages() {
-  $("page-list").innerHTML = state.pages
+  $("page-select").innerHTML = state.pages
     .map(
       (page, index) =>
-        `<button class="page-item ${state.page === index ? "active" : ""}" data-page="${index}" ${state.page === index ? 'aria-current="page"' : ""} ${state.running ? "disabled" : ""} aria-label="第 ${index + 1} 页，${statusLabels[page.status]}"><span class="page-thumbnail ${page.status === "done" ? "finished" : page.status === "failed" ? "failed" : ""}" aria-hidden="true"><span></span><span></span><span></span><span></span></span><span class="page-item-info"><span class="page-number">第 ${String(index + 1).padStart(2, "0")} 页</span><span class="page-state">${page.status === "done" && state.changed.has(index) ? "分镜有修改" : statusLabels[page.status]}</span></span></button>`,
+        `<option value="${index}">第 ${index + 1} / ${state.pages.length} 页 · ${statusLabels[page.status]}</option>`,
     )
     .join("");
-  const count = state.pages.filter((page) => page.status === "done").length;
-  $("sidebar-count").textContent = `${count} / ${state.pages.length} 成图`;
+  $("page-select").value = String(state.page);
+  $("page-select").disabled = state.running;
 }
 
 function renderCanvas() {
   const page = state.pages[state.page];
   $("script-view").setAttribute("aria-pressed", state.view === "script");
   $("image-view").setAttribute("aria-pressed", state.view === "image");
-  $("canvas-caption").textContent =
-    state.view === "script" ? "分镜预览" : "漫画成图";
   const sheet = $("comic-sheet");
   sheet.style.width = `min(100%, ${490 * state.zoom}px)`;
   if (state.view === "script") {
-    sheet.innerHTML = `<div class="sheet-heading"><h2>${escapeHTML(state.title)}</h2><span>${String(state.page + 1).padStart(2, "0")} / ${String(state.pages.length).padStart(2, "0")}</span></div><div class="panels">${page.panels.map((text, index) => `<button class="comic-panel ${state.panel === index ? "selected" : ""}" data-panel="${index}" aria-pressed="${state.panel === index}" aria-label="编辑第 ${index + 1} 格"><span class="panel-kicker"><span>第 ${String(index + 1).padStart(2, "0")} 格</span><span>${state.panel === index ? "编辑中" : ""}</span></span><span class="panel-copy">${escapeHTML(text)}</span></button>`).join("")}</div><div class="sheet-footer"><span>STORYBOARD</span><span>${escapeHTML(page.title)} · 仅脚本演示</span></div>`;
+    sheet.innerHTML = `<div class="sheet-heading"><h2>${escapeHTML(state.title)}</h2></div><div class="panels">${page.panels.map((text, index) => `<button class="comic-panel ${state.editing && state.panel === index ? "selected" : ""}" data-panel="${index}" aria-pressed="${state.editing && state.panel === index}" aria-label="编辑第 ${index + 1} 格"><span class="panel-kicker"><span>第 ${String(index + 1).padStart(2, "0")} 格</span><span>${state.editing && state.panel === index ? "编辑中" : ""}</span></span><span class="panel-copy">${escapeHTML(text)}</span></button>`).join("")}</div><div class="sheet-footer">点击分镜即可编辑</div>`;
   } else if (page.status === "done") {
     sheet.innerHTML = `<div class="image-preview"><div class="version-selector"><label for="version">图片版本</label><select id="version"><option value="latest">当前版本 · 演示</option><option value="previous">上一版本 · 演示</option></select></div><img src="${sampleImage}" alt="仓库现有的中文漫画示例，用于演示成图预览"><div class="modal-note">这里使用仓库已有示例图演示预览；并非当前分镜生成的图片。两个版本入口复用同一素材。</div>${state.changed.has(state.page) ? '<div class="modal-note">分镜已修改，成图可能未同步。旧图保留供参考。</div>' : ""}</div>`;
     $("version").value = state.version;
@@ -84,8 +85,7 @@ function renderCanvas() {
       toast("已切换演示版本；本原型复用同一张示例素材。");
     });
   } else {
-    sheet.innerHTML = `<div class="empty-image">${icon("image")}<h2>${page.status === "running" ? "正在演示生成流程" : page.status === "failed" ? "这一页尚未生成成功" : "画面，等待故事发生"}</h2><p>${page.status === "failed" ? "已完成的页面会保留，可以单独重试这一页。" : "分镜准备好后，就可以把文字变成画面。"}</p><button class="primary-button" id="empty-generate" ${state.running ? "disabled" : ""}>${page.status === "failed" ? "重试本页（演示）" : "生成本页（演示）"}</button><span class="field-help">不调用 AI，不消耗额度</span></div>`;
-    $("empty-generate").addEventListener("click", () => generate(false));
+    sheet.innerHTML = `<div class="empty-image">${icon("image")}<h2>${page.status === "running" ? "正在演示生成流程" : page.status === "failed" ? "这一页尚未生成成功" : "画面，等待故事发生"}</h2><p>${page.status === "failed" ? "已完成的页面会保留，可以单独重试这一页。" : "分镜准备好后，就可以把文字变成画面。"}</p><span class="field-help">使用右上角“${page.status === "failed" ? "重试本页" : "生成本页"}”</span></div>`;
   }
 }
 
@@ -97,11 +97,14 @@ function renderInspector() {
   $("panel-text").value = text;
   $("panel-text").disabled = state.running;
   $("character-count").textContent = `${Array.from(text).length} 字`;
-  $("style-chip").textContent = state.style;
   $("editor-note").innerHTML =
     state.source === "comicbrain" && state.reviewFailed
       ? `${icon("info")}<div><p>review 草稿保存失败（演示）。<br>修改仍保留在当前页面。</p><button class="quiet-button" data-action="retry-review">重试保存</button></div>`
-      : `${icon("info")}<p>${state.changed.has(state.page) ? "分镜已修改。<br>已有成图可能未同步。" : "先打磨分镜，再生成画面。<br>修改不会自动消耗生成额度。"}</p>`;
+      : state.changed.has(state.page) &&
+          state.pages[state.page].status === "done"
+        ? "<p>分镜已修改，成图尚未更新。</p>"
+        : "";
+  $("editor-note").hidden = !$("editor-note").textContent;
 }
 
 function renderTask() {
@@ -122,10 +125,17 @@ function renderTask() {
   $("task-description").textContent = state.running
     ? `已完成 ${completed} / ${state.pages.length} · 生成期间暂不可切页或编辑`
     : `${completed} 页已成图${remaining ? `，${remaining} 页待生成` : " · 可以查看成图或制作封面"}`;
-  $("batch-label").textContent = remaining
-    ? `生成剩余 ${remaining} 页`
-    : "全部已完成";
-  $("batch-generate").disabled = state.running || !remaining;
+  document.querySelector(".taskbar").hidden =
+    !state.running && !failed && !state.reviewFailed;
+  if (state.reviewFailed && !state.running && !failed) {
+    $("task-title").textContent = "草稿保存失败，修改仍保留在当前演示";
+    $("task-description").innerHTML =
+      '<button class="quiet-button" data-action="retry-review">重试保存</button>';
+  }
+  if (failed && !state.running) {
+    $("task-description").innerHTML =
+      '<button class="quiet-button" data-action="resume">重试未完成页面</button>';
+  }
   $("generate-page").disabled = state.running;
   $("generate-label").textContent =
     state.pages[state.page].status === "done"
@@ -141,12 +151,7 @@ function renderTask() {
 function render() {
   const page = state.pages[state.page];
   $("project-name").textContent = state.title;
-  $("page-title").textContent =
-    `第 ${String(state.page + 1).padStart(2, "0")} 页`;
-  $("page-subtitle").textContent =
-    `${page.title} · ${page.panels.length} 格分镜`;
-  $("page-position").textContent =
-    `第 ${state.page + 1} 页 / 共 ${state.pages.length} 页`;
+  $("page-subtitle").textContent = page.title;
   updateSaveStatus();
   renderPages();
   renderCanvas();
@@ -161,8 +166,7 @@ function setPage(index) {
   state.version = "latest";
   render();
   $("canvas-area").scrollTop = 0;
-  document.querySelector(".page-sidebar").classList.remove("open");
-  $("nav-toggle").setAttribute("aria-expanded", "false");
+  closeEditor(false);
 }
 
 function openDialog(title, content, onReady) {
@@ -242,6 +246,7 @@ function newProject() {
         state.source = "demo";
         state.reviewFailed = false;
         state.changed.clear();
+        closeEditor(false);
         state.cover = false;
         closeDialog();
         render();
@@ -401,6 +406,11 @@ function socialDialog() {
 }
 
 const actions = {
+  more: () =>
+    openDialog(
+      "更多操作",
+      `<div class="dialog-body"><div class="dialog-list menu-list"><button class="dialog-item" data-action="story">故事与参考图</button><button class="dialog-item" data-action="cover">作品封面</button><button class="dialog-item" data-action="batch-options">批量成图</button><button class="dialog-item" data-action="settings">模型设置</button><div class="menu-divider"></div><button class="dialog-item" data-action="scenarios">体验异常状态</button><a class="dialog-item" href="/index.html?console=original">返回现有控制台</a></div><p class="menu-footnote">演示稿不调用 AI、不读写真实项目；刷新后重置。</p></div>`,
+    ),
   close: closeDialog,
   new: () => guardGeneration(newProject),
   story: () => guardGeneration(storyDialog),
@@ -411,6 +421,7 @@ const actions = {
     state.reviewFailed = false;
     renderInspector();
     updateSaveStatus();
+    renderTask();
     toast("演示：review 草稿保存状态已恢复，未写入工作区。");
   },
   export: () =>
@@ -452,12 +463,12 @@ document.addEventListener("click", (event) => {
   const panel = event.target.closest("[data-panel]");
   if (panel && !state.running) {
     state.panel = Number(panel.dataset.panel);
+    state.editing = true;
     renderCanvas();
     renderInspector();
-    if (matchMedia("(max-width:1100px)").matches) {
-      $("inspector").classList.add("open");
-      $("inspector-toggle").setAttribute("aria-expanded", "true");
-    }
+    $("inspector").classList.add("open");
+    $("inspector").inert = false;
+    $("panel-text").focus();
   }
 });
 $("panel-text").addEventListener("input", (event) => {
@@ -471,9 +482,10 @@ $("panel-text").addEventListener("input", (event) => {
   if (copy) copy.textContent = value;
   renderPages();
   updateSaveStatus();
-  if (!state.reviewFailed)
-    $("editor-note").innerHTML =
-      `${icon("info")}<p>分镜已修改。<br>已有成图可能未同步。</p>`;
+  if (!state.reviewFailed) {
+    $("editor-note").hidden = state.pages[state.page].status !== "done";
+    $("editor-note").textContent = "分镜已修改，成图尚未更新。";
+  }
 });
 $("script-view").addEventListener("click", () => {
   state.view = "script";
@@ -481,12 +493,14 @@ $("script-view").addEventListener("click", () => {
 });
 $("image-view").addEventListener("click", () => {
   state.view = "image";
-  renderCanvas();
+  closeEditor(false);
 });
 $("previous-page").addEventListener("click", () => setPage(state.page - 1));
 $("next-page").addEventListener("click", () => setPage(state.page + 1));
 $("generate-page").addEventListener("click", () => generate(false));
-$("batch-generate").addEventListener("click", () => generate(true));
+$("page-select").addEventListener("change", (event) =>
+  setPage(Number(event.target.value)),
+);
 $("zoom-out").addEventListener("click", () => {
   state.zoom = Math.max(0.65, state.zoom - 0.15);
   renderCanvas();
@@ -514,31 +528,25 @@ $("workspace-dialog").addEventListener("click", (event) => {
   )
     closeDialog();
 });
-$("nav-toggle").addEventListener("click", () => {
-  const open = document.querySelector(".page-sidebar").classList.toggle("open");
-  $("nav-toggle").setAttribute("aria-expanded", String(open));
-});
-$("inspector-toggle").addEventListener("click", () => {
-  const open = $("inspector").classList.toggle("open");
-  $("inspector-toggle").setAttribute("aria-expanded", String(open));
-});
-$("inspector-close").addEventListener("click", () => {
+function closeEditor(restoreFocus = true) {
+  const wasOpen = $("inspector").classList.contains("open");
+  state.editing = false;
   $("inspector").classList.remove("open");
-  $("inspector-toggle").setAttribute("aria-expanded", "false");
-});
+  $("inspector").inert = true;
+  renderCanvas();
+  if (restoreFocus && wasOpen)
+    document.querySelector(`[data-panel="${state.panel}"]`)?.focus();
+}
+$("inspector-close").addEventListener("click", () => closeEditor());
+$("editor-done").addEventListener("click", () => closeEditor());
 document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape") {
-    $("inspector").classList.remove("open");
-    document.querySelector(".page-sidebar").classList.remove("open");
-    $("nav-toggle").setAttribute("aria-expanded", "false");
-    $("inspector-toggle").setAttribute("aria-expanded", "false");
-  }
+  if (event.key === "Escape" && !$("workspace-dialog").open) closeEditor();
 });
 $("project-menu-button").addEventListener("click", () =>
   guardGeneration(() =>
     openDialog(
       "当前作品",
-      `<div class="dialog-body"><div class="dialog-item active">${icon("book")}<div><strong>${escapeHTML(state.title)}</strong><small>${state.pages.length} 页分镜 · 本次演示</small></div></div><button class="dialog-item" data-action="rename"><div><strong>重命名作品</strong><small>仅修改演示名称</small></div><span>›</span></button><button class="dialog-item" data-action="new"><div><strong>新建作品</strong><small>不会改写已有控制台会话</small></div><span>›</span></button></div>`,
+      `<div class="dialog-body"><div class="dialog-item active">${icon("book")}<div><strong>${escapeHTML(state.title)}</strong><small>${state.pages.length} 页分镜 · 本次演示</small></div></div><button class="dialog-item" data-action="rename"><div><strong>重命名作品</strong><small>仅修改演示名称</small></div><span>›</span></button><button class="dialog-item" data-action="new"><div><strong>新建作品</strong><small>不会改写已有控制台会话</small></div><span>›</span></button><button class="dialog-item" data-action="import"><div><strong>导入 ComicBrain</strong></div><span>›</span></button></div>`,
     ),
   ),
 );
@@ -557,14 +565,13 @@ actions.rename = () =>
       });
     },
   );
-$("demo-scenarios").addEventListener("click", () =>
+actions.scenarios = () =>
   guardGeneration(() =>
     openDialog(
       "体验异常状态",
       `<div class="dialog-body"><p>选择一个状态，检查操作反馈是否清楚。</p><button class="dialog-item" data-action="demo-fail"><div><strong>成图失败与续生成</strong><small>下一次演示生成会有一页失败，其余页面继续完成</small></div><span>›</span></button><button class="dialog-item" data-action="demo-review"><div><strong>review 草稿保存失败</strong><small>查看保留修改和重试保存的提示</small></div><span>›</span></button><button class="dialog-item" data-action="demo-reset"><div><strong>恢复初始设计稿</strong><small>重置原型状态，不影响真实项目</small></div><span>›</span></button></div>`,
     ),
-  ),
-);
+  );
 actions["demo-fail"] = () => {
   state.failNext = true;
   if (state.pages.every((page) => page.status === "done"))
@@ -594,4 +601,5 @@ actions["demo-reset"] = () => {
   closeDialog();
   render();
 };
+$("inspector").inert = true;
 render();

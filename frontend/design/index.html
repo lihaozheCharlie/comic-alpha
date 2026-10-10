@@ -19,7 +19,7 @@
     <link rel="stylesheet" href="./prototype.css" />
     <script type="module" src="./prototype.js"></script>
   </head>
-  <body>
+  <body class="minimal-workspace">
     <header class="topbar">
       <a class="brand" href="./index.html" aria-label="ComicPerfect 原型首页"
         ><span class="brand-symbol" aria-hidden="true"
@@ -37,11 +37,20 @@
       </button>
       <span class="save-status" id="save-status">修改保留在本次演示</span>
       <div class="top-actions">
-        <span class="prototype-badge">交互设计稿</span
-        >      <button class="quiet-button" data-action="settings" aria-label="模型设置">
-          <span data-icon="settings"></span
-          ><span class="optional-label">模型设置</span></button
-        ><button class="outline-button" data-action="export">
+        <span
+          class="prototype-badge"
+          title="不调用 AI，不读写真实项目；刷新重置"
+          >演示稿</span
+        >
+        <button
+          class="icon-button"
+          data-action="more"
+          aria-label="更多操作"
+          aria-haspopup="dialog"
+        >
+          <span data-icon="more"></span>
+        </button>
+        <button class="outline-button" data-action="export">
           <span data-icon="export"></span>导出<span
             class="down-chevron"
             aria-hidden="true"
@@ -51,71 +60,21 @@
       </div>
     </header>
     <div class="workspace">
-      <aside class="page-sidebar" aria-label="作品与页面导航">
-        <div class="sidebar-actions">
-          <button class="new-button" data-action="new">
-            <span data-icon="plus"></span>新建作品</button
-          ><button class="quiet-button import-button" data-action="import">
-            <span data-icon="import"></span>导入 ComicBrain
-          </button>
-        </div>
-        <div class="sidebar-heading">
-          <span>分镜页面</span><span id="sidebar-count">2 / 6 成图</span>
-        </div>
-        <nav class="page-list" id="page-list" aria-label="分镜页面"></nav>
-        <div class="sidebar-footer">
-          <button class="sidebar-link" data-action="cover">
-            <span data-icon="image"></span>作品封面<span class="right-chevron"
-              >›</span
-            ></button
-          ><button class="sidebar-link" data-action="story">
-            <span data-icon="book"></span>故事与设定<span class="right-chevron"
-              >›</span
-            ></button
-          ><a class="original-link" href="/index.html?console=original"
-            ><span data-icon="external"></span>返回现有控制台</a
-          >
-        </div>
-      </aside>
       <main class="main-workspace">
         <div class="canvas-toolbar">
-          <div class="page-context">
-            <button
-              class="icon-button mobile-nav"
-              id="nav-toggle"
-              aria-label="展开页面导航"
-              aria-expanded="false"
-            >
-              <span data-icon="menu"></span>
-            </button>
-            <div>
-              <h1 id="page-title">第 02 页</h1>
-              <span id="page-subtitle">来信 · 4 格分镜</span>
-            </div>
-          </div>
+          <h1 class="page-context" id="page-subtitle">来信</h1>
           <div class="view-switch" role="group" aria-label="画布视图">
             <button id="script-view" aria-pressed="true">分镜脚本</button
             ><button id="image-view" aria-pressed="false">漫画成图</button>
           </div>
           <div class="toolbar-actions">
-            <button
-              class="icon-button inspector-toggle"
-              id="inspector-toggle"
-              aria-label="展开属性编辑"
-              aria-expanded="false"
-            >
-              <span data-icon="sliders"></span></button
-            ><button class="primary-button" id="generate-page">
+            <button class="primary-button" id="generate-page">
               <span data-icon="spark"></span
               ><span id="generate-label">生成本页</span>
             </button>
           </div>
         </div>
         <div class="canvas-area" id="canvas-area">
-          <div class="canvas-caption">
-            <span id="canvas-caption">分镜预览</span
-            ><span>点击格子，编辑画面描述</span>
-          </div>
           <section
             class="comic-sheet"
             id="comic-sheet"
@@ -123,11 +82,12 @@
           ></section>
         </div>
         <div class="canvas-bottom">
-          <span id="page-position">第 2 页 / 共 6 页</span>
-          <div class="pagination">
+          <div class="pagination" aria-label="页面切换">
             <button class="icon-button" id="previous-page" aria-label="上一页">
-              <span data-icon="left"></span></button
-            ><button class="icon-button" id="next-page" aria-label="下一页">
+              <span data-icon="left"></span>
+            </button>
+            <select id="page-select" aria-label="切换页面"></select>
+            <button class="icon-button" id="next-page" aria-label="下一页">
               <span data-icon="right"></span>
             </button>
           </div>
@@ -153,16 +113,6 @@
               ><span id="task-description">2 页已成图，4 页待生成</span>
             </div>
           </div>
-          <button class="outline-button" id="batch-generate">
-            <span data-icon="spark"></span
-            ><span id="batch-label">生成剩余 4 页</span></button
-          ><button
-            class="icon-button"
-            data-action="batch-options"
-            aria-label="更多批量操作"
-          >
-            <span data-icon="more"></span>
-          </button>
         </footer>
       </main>
       <aside class="inspector" id="inspector" aria-label="上下文编辑面板">
@@ -178,35 +128,11 @@
             >第 <span id="inspector-page">02</span> 页</span
           >
         </div>
-        <section class="page-settings">
-          <div class="section-heading">
-            <h2>本页设定</h2>
-            <button class="quiet-button" data-action="story">调整</button>
-          </div>
-          <div class="setting-chips">
-            <span id="style-chip">水彩风格</span><span>中文</span
-            ><span>3 行布局</span>
-          </div>
-          <div class="reference-empty">
-            <span data-icon="image"></span>
-            <div>
-              <strong>参考图片</strong><span>可在故事与设定中添加</span>
-            </div>
-            <button
-              class="icon-button"
-              data-action="story"
-              aria-label="添加参考图片"
-            >
-              +
-            </button>
-          </div>
-        </section>
+
         <section class="panel-editor">
           <div class="section-heading">
             <h2 id="panel-heading">第 02 格</h2>
-            <span class="selection-dot">已选中</span>
           </div>
-          <p class="field-help">把镜头、动作和对白，写在这里。</p>
           <label class="field-label" for="panel-text">分镜描述</label
           ><textarea id="panel-text" rows="9" spellcheck="false"></textarea>
           <div class="editor-meta">
@@ -217,22 +143,12 @@
             <p>先打磨分镜，再生成画面。<br />修改不会自动消耗生成额度。</p>
           </div>
         </section>
-        <div class="inspector-tip">
-          <span data-icon="cursor"></span>
-          <div>
-            <strong>专注一个镜头</strong>
-            <p>点击画布中的其他格子，<br />继续编辑下一个画面。</p>
-          </div>
-        </div>
+        <button class="outline-button editor-done" id="editor-done">
+          完成编辑
+        </button>
       </aside>
     </div>
-    <div class="prototype-note">
-      <span>原型演示</span>不调用 AI · 不读写项目或密钥 · 刷新重置<button
-        id="demo-scenarios"
-      >
-        体验异常状态
-      </button>
-    </div>
+
     <dialog id="workspace-dialog" aria-labelledby="dialog-title">
       <div class="dialog-top">
         <div>
