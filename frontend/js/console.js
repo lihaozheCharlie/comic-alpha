@@ -8,16 +8,16 @@ const state = {
 const main=document.querySelector('#main');
 const modal=document.querySelector('#modal');
 const selectedSeries=()=>state.series.find(s=>s.id===state.selected)||state.series[0];
-const navigation=[['home','home','创作台'],['series','layers','漫画系列'],['single','spark','单篇创作'],['history','folder','漫画档案'],['principles','book','创作原则']];
+const navigation=[['home','home','开始创作'],['series','layers','漫画系列'],['principles','book','创作指南']];
 let toastTimer;
 function toast(text){const el=document.querySelector('#toast');el.textContent=text;el.classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('visible'),3500);}
 function openModal(title,html){document.querySelector('#modal-title').textContent=title;document.querySelector('#modal-content').innerHTML=html;if(!modal.open)modal.showModal();}
 function closeModal(){modal.close();}
 function navigate(route,id){closeModal();location.hash=id?`${route}/${encodeURIComponent(id)}`:route;document.querySelector('.sidebar').classList.remove('mobile-open');}
 function render(){
-  const active=state.route==='detail'||state.route==='workflow'?(state.workflow?.mode==='single'&&state.route==='workflow'?'single':'series'):state.route;
+  const active=['detail','history'].includes(state.route)?'series':state.route==='single'?'home':state.route==='workflow'?(state.workflow?.mode==='single'?'home':'series'):state.route;
   document.querySelector('#navigation').innerHTML=`<div class="nav-label">创作工作台</div>${navigation.map(([id,ic,label])=>`<a class="nav-item ${active===id?'active':''}" href="#${id}" ${active===id?'aria-current="page"':''}>${icon(ic)}<span>${label}</span>${id==='series'?`<span class="count">${state.series.length}</span>`:''}</a>`).join('')}`;
-  document.querySelector('#series-navigation').innerHTML=state.series.map(s=>`<button class="series-nav-item" data-action="open-series" data-id="${e(s.id)}"><span class="series-dot"></span>${e(s.name)}</button>`).join('');
+  document.querySelector('#search-box').hidden=!['home','series','history'].includes(state.route);
   const labels={home:'创作台',series:'漫画系列',single:'单篇创作',history:'漫画档案',principles:'创作原则',detail:selectedSeries().name,workflow:state.workflow?.mode==='single'?'单篇创作':'系列创作'};
   document.querySelector('#page-label').textContent=labels[state.route]||'创作台';
   const views={home:()=>homeView(state),series:()=>seriesView(state),detail:()=>detailView(state,selectedSeries()),principles:()=>principlesView(state),history:()=>historyView(state),single:()=>singleView(state),workflow:()=>workflowView(state,selectedSeries())};
@@ -35,7 +35,7 @@ function prepareWorkflow(id,mode='series'){
   const key=mode==='single'?'single':id;
   if(state.workflow?.key===key)return;
   state.selected=id||state.selected;
-  state.workflow={key,mode,step:mode==='single'?1:0,maxStep:mode==='single'?1:0,rulesRead:false,direction:mode==='single'?state.singlePrompt:'',count:mode==='single'?1:3,pages:mode==='single'?state.singlePages:6,outlined:false,outlines:[],reviewIndex:0,generated:false};
+  state.workflow={key,mode,step:1,maxStep:1,direction:mode==='single'?state.singlePrompt:'',count:1,pages:mode==='single'?state.singlePages:6,outlined:false,outlines:[],reviewIndex:0,generated:false};
 }
 function startSeries(id){prepareWorkflow(id);navigate('workflow',id);if(state.route==='workflow')render();}
 function invalidateApproval(){const w=state.workflow;if(!w)return;w.generated=false;w.outlines.forEach(o=>o.approved=false);w.maxStep=Math.min(w.maxStep,2);}
@@ -44,11 +44,10 @@ function drawOutlines(){
   if(!w.direction.trim()){toast('请先写下本次创作方向。');document.querySelector('#story-direction').focus();return;}
   const s=selectedSeries();
   w.outlines=Array.from({length:w.count},(_,i)=>({title:w.mode==='single'?'我的独立故事':i===0?s.chapters[0].title:i===1?'下一章：故事的转折':`后续章节 ${i+1}`,summary:i===0?w.direction:'待设计：承接上一章的结果，补充人物目标、关键选择及章末悬念。',script:'',notes:'',approved:false}));
-  w.outlined=true;w.generated=false;w.maxStep=1;w.reviewIndex=0;render();toast('已展开可编辑的剧情卡片。这是模板，不是 AI 生成。');
+  w.outlined=true;w.generated=false;w.maxStep=1;w.reviewIndex=0;nextStep();toast('已展开可编辑模板，请调整后确认；未调用 AI。');
 }
 function nextStep(){
   const w=state.workflow;
-  if(w.step===0&&!w.rulesRead)return;
   if(w.step===1){
     if(!w.outlined||!w.outlines.length)return;
     if(w.outlines.some(o=>!o.title.trim()||!o.summary.trim())){toast('请为每一章补充标题和剧情目标。');return;}
@@ -89,10 +88,18 @@ document.addEventListener('click',event=>{
     case 'view-comic':viewer(id,chapter);break;
     case 'context-info':openModal('续作不是重新开始',`<p>正式系列创作会先读取系列总览、创作约束、故事主线与当前状态，再带入最近章节、人物关系、世界规则和未完伏笔。</p><p>全部当前有效原则、全局偏好和系列偏好需逐项检查：采用的规则落实到具体设计，不适用或覆盖的规则说明原因。</p>${notice('这里展示的是上下文结构，尚未读取真实私有 Wiki。')}<button class="button primary" data-action="close-modal">了解了</button>`);break;
     case 'single-example':state.singlePrompt='一只怕水的猫，决定成为一名海盗。希望故事轻松有趣，结尾有一点温暖。';document.querySelector('#single-prompt').value=state.singlePrompt;break;
-    case 'single-outline':if(!state.singlePrompt.trim()){toast('先输入一个想法，故事才能开始。');document.querySelector('#single-prompt').focus();break;}state.workflow=null;prepareWorkflow(state.selected,'single');navigate('workflow');break;
+    case 'single-outline':if(!state.singlePrompt.trim()){toast('先输入一个想法，故事才能开始。');document.querySelector('#single-prompt').focus();break;}state.workflow=null;prepareWorkflow(state.selected,'single');drawOutlines();navigate('workflow');break;
     case 'outline-preview':drawOutlines();break;
     case 'next-step':nextStep();break;
-    case 'previous-step':state.workflow.step=Math.max(0,state.workflow.step-1);render();break;
+    case 'approve-review':{
+      const w=state.workflow;const o=w.outlines[w.reviewIndex];
+      if(!o.title.trim()||!o.script.trim()){toast('请先补充章节标题和分镜内容。');return;}
+      o.approved=true;
+      const pending=w.outlines.findIndex(x=>!x.approved);
+      if(pending!==-1){w.reviewIndex=pending;render();toast('本章已确认，请继续调整下一章。');}else nextStep();
+      break;
+    }
+    case 'previous-step':state.workflow.step=Math.max(1,state.workflow.step-1);render();break;
     case 'go-step':if(Number(id)<=state.workflow.maxStep){state.workflow.step=Number(id);render();}break;
     case 'review-tab':state.workflow.reviewIndex=Number(id);render();break;
     case 'save-preview':toast('草稿已保留在当前预览会话；刷新会重置，请导出以长期保留。');break;
@@ -111,9 +118,9 @@ document.addEventListener('input',event=>{
   if(el.dataset.outline!==undefined){w.outlines[Number(el.dataset.outline)][el.dataset.field]=el.value;w.outlines[Number(el.dataset.outline)].script='';invalidateApproval();}
   if(['review-title','review-script','review-notes'].includes(el.id)){
     const o=w.outlines[w.reviewIndex];o[{'review-title':'title','review-script':'script','review-notes':'notes'}[el.id]]=el.value;o.approved=false;w.generated=false;w.maxStep=2;
-    const checkbox=document.querySelector('#review-approved');if(checkbox)checkbox.checked=false;
-    const next=document.querySelector('[data-action="next-step"]');if(next)next.disabled=true;
-    const status=document.querySelector('.review-status span');if(status)status.innerHTML=`${icon('check')} ${w.outlines.filter(o=>o.approved).length} / ${w.outlines.length} 章已审阅`;
+    const status=document.querySelector('.review-status span');if(status)status.innerHTML=`${icon('check')} ${w.outlines.length>1?`${w.outlines.filter(o=>o.approved).length} / ${w.outlines.length} 章已确认`:'由你确认后才能进入制作'}`;
+    document.querySelectorAll('.review-tabs button').forEach((button,i)=>{button.textContent=`第 ${i+1} 章${w.outlines[i].approved?' · 已确认':''}`;});
+    const approve=document.querySelector('[data-action="approve-review"]');if(approve)approve.innerHTML=`${w.outlines.some((o,i)=>i!==w.reviewIndex&&!o.approved)?'确认本章，查看下一章':'确认剧情，进入制作'} ${icon('arrow')}`;
   }
 });
 document.addEventListener('change',event=>{
@@ -122,14 +129,8 @@ document.addEventListener('change',event=>{
   if(el.id==='single-style')state.singleStyle=el.value;
   if(el.id==='single-pages')state.singlePages=Number(el.value);
   const w=state.workflow;if(!w)return;
-  if(el.id==='rules-read'){w.rulesRead=el.checked;document.querySelector('[data-action="next-step"]').disabled=!el.checked;}
   if(el.id==='workflow-count'){w.count=Number(el.value);w.outlined=false;w.outlines=[];w.maxStep=1;render();}
   if(el.id==='workflow-pages'){w.pages=Number(el.value);w.outlines.forEach(o=>o.script='');invalidateApproval();}
-  if(el.id==='review-approved'){
-    const o=w.outlines[w.reviewIndex];
-    if(el.checked&&(!o.title.trim()||!o.script.trim())){el.checked=false;toast('请先补充章节标题和分镜内容。');return;}
-    o.approved=el.checked;w.generated=false;if(!el.checked)w.maxStep=2;render();
-  }
 });
 document.addEventListener('submit',event=>{
   if(event.target.id!=='new-series-form')return;event.preventDefault();const data=new FormData(event.target);const name=String(data.get('name')).trim();const description=String(data.get('description')).trim();
@@ -139,7 +140,6 @@ document.addEventListener('submit',event=>{
 modal.addEventListener('click',event=>{if(event.target===modal){const rect=modal.getBoundingClientRect();if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)closeModal();}});
 document.addEventListener('keydown',event=>{if(event.key==='/'&&!['INPUT','TEXTAREA','SELECT'].includes(event.target.tagName)&&!event.nativeEvent?.isComposing&&!event.isComposing&&event.keyCode!==229&&!modal.open){event.preventDefault();document.querySelector('#global-search').focus();}});
 window.addEventListener('hashchange',readRoute);
-document.querySelector('#classic-link').innerHTML=`${icon('external')}<span>原版生成器</span>`;
-document.querySelector('#settings-link').innerHTML=`${icon('settings')}<span>创作设置</span>`;
+document.querySelector('#settings-link').innerHTML=`${icon('settings')}<span>设置与实际生成</span>`;
 document.querySelector('#search-icon').innerHTML=icon('search');
 readRoute();

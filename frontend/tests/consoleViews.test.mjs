@@ -7,16 +7,17 @@ function fixture() {
   return {
     series: structuredClone(demoSeries), search: '', filter: 'all', sort: 'recent', detailTab: 'chapters', principleSearch: '',
     singlePrompt: '', singleStyle: '日系治愈', singlePages: 3,
-    workflow: {mode: 'series', step: 0, maxStep: 0, rulesRead: false, count: 1, pages: 3, direction: '演示方向', outlined: false, outlines: [], reviewIndex: 0, generated: false}
+    workflow: {mode: 'series', step: 1, maxStep: 1, count: 1, pages: 3, direction: '演示方向', outlined: false, outlines: [], reviewIndex: 0, generated: false}
   };
 }
 
 test('home provides separate series and standalone entries', () => {
   const html = homeView(fixture());
-  assert.match(html, /data-action="choose-series"/);
+  assert.match(html, /data-action="series"/);
   assert.match(html, /data-action="single"/);
   assert.match(html, /我的漫画系列/);
-  assert.match(html, /最近创作/);
+  assert.doesNotMatch(html, /最近创作|data-action="choose-series"|data-action="series-menu"/);
+  assert.match(html, /带入什么/);
 });
 
 test('series filtering and search isolate matching series', () => {
@@ -44,8 +45,8 @@ test('creator text is escaped in series cards and input values', () => {
 test('series detail exposes historic comics and separates unconnected canon', () => {
   const state = fixture();
   assert.match(detailView(state, state.series[0]), /data-action="view-comic"/);
-  state.detailTab = 'characters';
   assert.match(detailView(state, state.series[0]), /不编造系列正史/);
+  assert.doesNotMatch(detailView(state, state.series[0]), /data-action="detail-tab"/);
   assert.match(historyView(state), /不代表这些示例系列的真实生成历史/);
 });
 
@@ -53,20 +54,25 @@ test('principle summaries disclose the missing full private catalog', () => {
   assert.match(principlesView(fixture()), /不宣称已完成全量规则检查/);
 });
 
-test('rules must be reviewed before progressing', () => {
+test('three-step workflow includes principles inline with design', () => {
   const state = fixture();
-  assert.match(workflowView(state, state.series[0]), /data-action="next-step" disabled/);
-  state.workflow.rulesRead = true;
-  assert.doesNotMatch(workflowView(state, state.series[0]), /data-action="next-step" disabled/);
+  const html = workflowView(state, state.series[0]);
+  assert.match(html, /ComicBrain 原则与系列上下文/);
+  assert.match(html, /未完成真实系列的全量规则复审/);
+  assert.match(html, /data-action="outline-preview"/);
+  assert.doesNotMatch(html, /rules-read|go-step|保留预览草稿/);
+  assert.equal((html.match(/class="step-number"/g)||[]).length, 3);
 });
 
-test('every chapter must be approved before production is enabled', () => {
+test('review has one approval action without an extra checkbox', () => {
   const state = fixture();
   state.workflow.step = 2;
   state.workflow.outlines = [{title: '示例', summary: '', script: '待填写', notes: '', approved: false}];
-  assert.match(workflowView(state, state.series[0]), /data-action="next-step" disabled/);
-  state.workflow.outlines[0].approved = true;
-  assert.doesNotMatch(workflowView(state, state.series[0]), /data-action="next-step" disabled/);
+  assert.match(workflowView(state, state.series[0]), /data-action="approve-review"/);
+  assert.match(workflowView(state, state.series[0]), /确认剧情，进入制作/);
+  assert.doesNotMatch(workflowView(state, state.series[0]), /review-approved/);
+  state.workflow.outlines.push({title: '第二章', summary: '', script: '待填写', notes: '', approved: false});
+  assert.match(workflowView(state, state.series[0]), /确认本章，查看下一章/);
   assert.match(workflowView(state, state.series[0]), /这不会批准 Wiki 正史更新/);
 });
 
