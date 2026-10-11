@@ -1,0 +1,9 @@
+{
+  "name": "comic-perfect-console",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "FRONTEND_PORT=3000 python3 serve_frontend.py",
+    "test:frontend": "node --test frontend/tests/storyboardImageReconciler.test.js frontend/tests/consoleViews.test.mjs"
+  }
+}
