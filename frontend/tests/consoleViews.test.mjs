@@ -17,7 +17,17 @@ test('home provides separate series and standalone entries', () => {
   assert.match(html, /data-action="single"/);
   assert.match(html, /我的漫画系列/);
   assert.doesNotMatch(html, /最近创作|data-action="choose-series"|data-action="series-menu"/);
-  assert.match(html, /带入什么/);
+  assert.match(html, /两种创作，都只需三步/);
+  assert.match(html, /data-action="start-series"/);
+  assert.match(html, /历史漫画/);
+  assert.doesNotMatch(html, /带入什么/);
+});
+
+test('single creation keeps defaults inside optional settings', () => {
+  const html = singleView(fixture());
+  assert.match(html, /<details class="inline-context"><summary>风格与篇幅/);
+  assert.match(html, /下一步：调整分镜/);
+  assert.match(html, /日系治愈 · 3 页/);
 });
 
 test('series filtering and search isolate matching series', () => {
