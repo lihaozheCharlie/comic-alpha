@@ -44,6 +44,31 @@ def _reject_nonlocal():
     return None
 
 
+@comicbrain_bp.route("/api/comicbrain/rules", methods=["GET"])
+def get_comicbrain_rules():
+    local_error = _reject_nonlocal()
+    if local_error:
+        return local_error
+    try:
+        return jsonify({"success": True, "rules": ComicBrainProjectService.get_creation_rules()})
+    except Exception as error:
+        return _error_response(error)
+
+
+@comicbrain_bp.route("/api/comicbrain/drafts", methods=["POST"])
+def create_comicbrain_draft():
+    local_error = _reject_nonlocal()
+    if local_error:
+        return local_error
+    if request.content_length and request.content_length > 2_000_000:
+        return jsonify({"error": "Draft exceeds the supported size"}), 413
+    try:
+        project = ComicBrainProjectService.create_draft(request.get_json(silent=True))
+        return jsonify({"success": True, "project": project}), 201
+    except Exception as error:
+        return _error_response(error)
+
+
 @comicbrain_bp.route("/api/comicbrain/projects", methods=["GET"])
 def list_comicbrain_projects():
     local_error = _reject_nonlocal()

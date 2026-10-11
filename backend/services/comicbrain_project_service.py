@@ -160,6 +160,95 @@ class ComicBrainProjectService:
         return cls._read_json_object(cls._storyboard_path(series_id, chapter_id))
 
     @classmethod
+    def create_draft(cls, payload: Any) -> Dict[str, Any]:
+        from uuid import uuid4
+        from services.comic_service import validate_script
+
+        if not isinstance(payload, dict):
+            raise ComicBrainValidationError("Draft must be a JSON object")
+        pages = payload.get("pages")
+        if not isinstance(pages, list) or not 1 <= len(pages) <= 10:
+            raise ComicBrainValidationError("Draft must contain 1 to 10 pages")
+        valid, error = validate_script(pages)
+        if not valid:
+            raise ComicBrainValidationError(error)
+        title = payload.get("title")
+        if not isinstance(title, str) or not title.strip() or len(title) > 180:
+            raise ComicBrainValidationError("A title of 1 to 180 characters is required")
+        parent = payload.get("parent")
+        base = {}
+        if parent is not None:
+            if not isinstance(parent, dict):
+                raise ComicBrainValidationError("Parent must be a project source")
+            base = cls.get_project(parent.get("series_id"), parent.get("chapter_id"))
+            cls.require_matching_revision(base, parent.get("snapshot_hash"), parent.get("source_hash"))
+            series_id = parent["series_id"]
+            series_title = base.get("series_title") or series_id
+        else:
+            series_id = "single-" + uuid4().hex[:16]
+            series_title = payload.get("series_title") or "独立短篇"
+            if not isinstance(series_title, str) or len(series_title) > 180:
+                raise ComicBrainValidationError("Invalid series title")
+        chapter_id = "draft-" + uuid4().hex[:16]
+        pages = copy.deepcopy(pages)
+        for index, page in enumerate(pages):
+            page["id"] = f"page-{index + 1}"
+        digest = hashlib.sha256(json.dumps(pages, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
+        now = datetime.now(timezone.utc).isoformat()
+        project = {
+            "schema_version": "comicbrain-alpha/1", "title": title.strip(),
+            "series_title": series_title, "status": "draft", "artifact_status": "draft",
+            "source": {"series_id": series_id, "chapter_id": chapter_id,
+                       "source_hash": digest, "snapshot_hash": digest,
+                       "status": "draft", "origin": "console", "source_updated_at": now},
+            "pages": pages, "characters": copy.deepcopy(base.get("characters", [])),
+            "settings": copy.deepcopy(base.get("settings", {})), "updated_at": now,
+        }
+        style = payload.get("comic_style", "ghibli")
+        if style not in {"doraemon", "american", "watercolor", "disney", "ghibli", "pixar", "shonen", "nezha", "langlangshan"}:
+            raise ComicBrainValidationError("Invalid comic style")
+        project["settings"]["comic_style"] = style
+        project_dir = cls._project_dir(series_id, chapter_id)
+        project_dir.mkdir(parents=True, exist_ok=False)
+        path = cls._storyboard_path(series_id, chapter_id)
+        temp_path = None
+        try:
+            with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=project_dir,
+                                             prefix=".storyboard-", suffix=".tmp", delete=False) as handle:
+                temp_path = handle.name
+                json.dump(project, handle, ensure_ascii=False, indent=2)
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temp_path, path)
+        finally:
+            if temp_path and os.path.exists(temp_path):
+                os.unlink(temp_path)
+        return project
+
+    @classmethod
+    def get_creation_rules(cls) -> List[Dict[str, Any]]:
+        root = cls.comicbrain_root()
+        rules = []
+        total_size = 0
+        for category in ("创作原则", "创作偏好"):
+            directory = (root / "wiki" / category).resolve()
+            cls._ensure_within(directory, root, "Rule directory escapes ComicBrain")
+            for path in sorted(directory.rglob("*.md")) if directory.is_dir() else []:
+                safe_path = path.resolve()
+                cls._ensure_within(safe_path, directory, "Rule file escapes its directory")
+                if not safe_path.is_file():
+                    continue
+                total_size += safe_path.stat().st_size
+                if total_size > 2_000_000:
+                    raise ComicBrainPackageError("Creation rules exceed the supported context size")
+                content = safe_path.read_text(encoding="utf-8")
+                if re.search(r"^status:\s*(deprecated|archived)\s*$", content, re.MULTILINE):
+                    continue
+                rules.append({"id": f"{category}/{path.relative_to(directory).as_posix()}",
+                              "title": path.stem, "category": category, "content": content})
+        return rules
+
+    @classmethod
     def _empty_render_manifest(
         cls,
         series_id: str,

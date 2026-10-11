@@ -334,6 +334,29 @@ class ComicAPI {
      * List storyboard packages exported by the embedded ComicBrain workspace.
      * @returns {Promise<Array>} Available ComicBrain projects
      */
+    static async comicBrainRequest(path, method = 'GET', payload) {
+        const response = await fetch(`${API_BASE_URL}/comicbrain/${path}`, {
+            method,
+            headers: payload ? { 'Content-Type': 'application/json' } : undefined,
+            body: payload ? JSON.stringify(payload) : undefined
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || data.success === false) {
+            throw new Error(response.status === 403
+                ? 'ComicBrain 私有数据仅允许在本机访问，请使用本地创作工作台。'
+                : data.error || `请求失败：${response.status}`);
+        }
+        return data;
+    }
+
+    static async getComicBrainRules() {
+        return (await this.comicBrainRequest('rules')).rules;
+    }
+
+    static async createComicBrainDraft(draft) {
+        return (await this.comicBrainRequest('drafts', 'POST', draft)).project;
+    }
+
     static async listComicBrainProjects() {
         try {
             const response = await fetch(`${API_BASE_URL}/comicbrain/projects`);
